@@ -1,6 +1,7 @@
-from flask import Flask, render_template
+from FLask import Flask, render_template
 
-app = Flask(__name__)
+from OrderFood import app
+
 
 @app.route("/")
 def index():
