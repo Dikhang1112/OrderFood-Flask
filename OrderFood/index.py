@@ -1,13 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-<<<<<<< Updated upstream
-app = Flask(__name__)
-=======
+
 from OrderFood import app
 from OrderFood.dao import *
 
->>>>>>> Stashed changes
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 

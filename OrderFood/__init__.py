@@ -1,11 +1,8 @@
-<<<<<<< Updated upstream
-=======
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import quote
 import os
-
-
 
 db = SQLAlchemy()
 
@@ -21,4 +18,4 @@ def create_app():
     return app
 
 app = create_app()
->>>>>>> Stashed changes
+
