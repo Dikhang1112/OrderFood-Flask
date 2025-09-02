@@ -1,10 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 from OrderFood import app
 from OrderFood.dao import *
-
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
@@ -17,11 +15,13 @@ def norm_role_for_db(role: str) -> str:
 def _role_to_str(r):
     # nếu r là Enum => lấy .value, còn lại giữ nguyên
     return getattr(r, "value", r)
+
 def is_customer(role: str) -> bool:
     return role in ("customer", "CUSTOMER")
 
 def is_owner(role: str) -> bool:
     return role in ("restaurant_owner", "RESTAURANT_OWNER")
+
 
 @app.route("/")
 def index():
@@ -48,7 +48,7 @@ def register():
         # Tạo user
         create_user(name=name, email=email, phone=phone, hashed_password=hashed, role=role)
 
-        # LẤY user vừa tạo để đưa vào session (tuỳ DAO bạn có thể trả về user từ create_user)
+        # LẤY user vừa tạo để đưa vào session
         user = get_user_by_email(email)
 
         # ---- AUTO LOGIN ----
