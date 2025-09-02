@@ -14,7 +14,8 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     db.init_app(app)
     with app.app_context():
-        from OrderFood import models  # noqa: F401
+        from OrderFood import models
+        db.create_all()# noqa: F401
 
     return app
 

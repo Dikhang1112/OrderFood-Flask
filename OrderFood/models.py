@@ -5,6 +5,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from OrderFood import db
 
+
 # =========================
 # ENUMS
 # =========================
@@ -267,7 +268,7 @@ class Refund(db.Model):
 # =========================
 # CREATE TABLES (optional)
 # =========================
-#if __name__ == "__main__":
-   # with app.app_context():
-       # db.create_all()
-       # print("Created tables.")
+# if __name__ == "__main__":
+#    with app.app_context():
+#        db.create_all()
+#        print("Created tables.")

@@ -1,6 +1,8 @@
-
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from OrderFood.models import db, User
+from sqlalchemy.orm import joinedload
+
+from OrderFood.models import db, User, Dish, RestaurantOwner, Restaurant
 
 ENUM_UPPERCASE = True  # True nếu DB dùng 'CUSTOMER','RESTAURANT_OWNER'
 
@@ -38,3 +40,36 @@ def create_user(name, email, phone, hashed_password, role: str):
     db.session.add(u)
     db.session.commit()
     return u
+
+def load_menu_owner(owner_id: int):
+    owner = RestaurantOwner.query.get(owner_id)
+    if not owner or not owner.restaurant:
+        return []  # chưa có nhà hàng
+
+    restaurant_id = owner.restaurant.restaurant_id
+    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
+    return dishes
+
+def restaurant_detail(restaurant_id: int):
+    return Dish.query.filter_by(res_id=restaurant_id).all()
+
+
+def get_restaurant_by_id(restaurant_id: int):
+    return Restaurant.query.get(restaurant_id)
+
+def get_restaurants_by_name(name: str = None):
+    if not name:
+        return []
+    name = name.strip()
+    return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%")).all()
+    # return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%"))
+
+
+
+
+def get_restaurants_by_dishes_name(dishes_name: str = None):
+    dishes = Dish.query.options(joinedload(Dish.restaurant)).filter(
+        func.lower(Dish.name).like(f"%{dishes_name.lower()}%")).all()
+    restaurants = list({dish.restaurant.restaurant_id: dish.restaurant for dish in dishes if dish.restaurant}.values())
+    return restaurants
+

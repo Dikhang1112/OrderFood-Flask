@@ -7,4 +7,25 @@
   <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
   <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
 </div>
+
+<div class="container mt-4">
+  <h3>Danh sách 50 nhà hàng</h3>
+  {% if restaurants %}
+    <div class="row">
+      {% for res in restaurants %}
+        <div class="col-md-4 mb-3">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">{{ res.name }}</h5>
+              <p class="card-text">{{ res.address }}</p>
+              <a href="/restaurant/{{res.restaurant_id}}" class="btn btn-primary">Xem chi tiết</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>Chưa có nhà hàng nào trong hệ thống.</p>
+  {% endif %}
+</div>
 {% endblock %}
