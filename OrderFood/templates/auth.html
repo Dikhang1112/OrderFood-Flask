@@ -1,0 +1,71 @@
+{% extends "layout/base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+
+<!-- THÊM WRAPPER để cô lập layout, tránh style body toàn trang -->
+<section class="auth-wrap">
+  <!-- GIỮ NGUYÊN NỘI DUNG FORM, chỉ đổi class vỏ ngoài như lần trước -->
+  <div class="auth-container" id="container">
+      <div class="form-container sign-up-container">
+          <!-- ĐĂNG KÝ -->
+          <form action="{{ url_for('register') }}" method="POST">
+              <h1>Create Account</h1>
+              <div class="social-container">
+                  <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
+                  <a href="#" class="social"><i class="fab fa-google-plus-g"></i></a>
+                  <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
+              </div>
+              <span>or use your email for registration</span>
+
+              <input type="text" name="name" placeholder="Name" required/>
+              <input type="email" name="email" placeholder="Email" required/>
+              <input type="password" name="password" placeholder="Password" required/>
+              <select name="role" required>
+                  <option value="" disabled selected>Select role</option>
+                  <option value="CUSTOMER">Customer</option>
+                  <option value="RESTAURANT_OWNER">Restaurant Owner</option>
+              </select>
+
+              <button type="submit">Sign Up</button>
+          </form>
+      </div>
+
+      <div class="form-container sign-in-container">
+          <!-- ĐĂNG NHẬP -->
+          <form action="{{ url_for('login') }}" method="POST">
+              <h1>Sign in</h1>
+              <div class="social-container">
+                  <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
+                  <a href="#" class="social"><i class="fab fa-google-plus-g"></i></a>
+                  <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
+              </div>
+              <span>or use your account</span>
+
+              <input type="email" name="email" placeholder="Email" required/>
+              <input type="password" name="password" placeholder="Password" required/>
+
+              <a href="#">Forgot your password?</a>
+              <button type="submit">Sign In</button>
+          </form>
+      </div>
+
+      <div class="overlay-container">
+          <div class="overlay">
+              <div class="overlay-panel overlay-left">
+                  <h1>Welcome Back!</h1>
+                  <p>To keep connected with us please login with your personal info</p>
+                  <button class="ghost" id="signIn" type="button">Sign In</button>
+              </div>
+              <div class="overlay-panel overlay-right">
+                  <h1>Hello, Friend!</h1>
+                  <p>Enter your personal details and start journey with us</p>
+                  <button class="ghost" id="signUp" type="button">Sign Up</button>
+              </div>
+          </div>
+      </div>
+  </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
