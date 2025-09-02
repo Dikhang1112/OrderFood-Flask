@@ -1,0 +1,36 @@
+<nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('index') }}">OrderFood</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mynavbar">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a>
+        </li>
+        {% if session.get('role') == 'customer' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_home') }}">Khu khách hàng</a></li>
+        {% elif session.get('role') == 'restaurant_owner' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('owner_home') }}">Khu chủ quán</a></li>
+        {% endif %}
+      </ul>
+
+      <form class="d-flex me-2">
+        <input class="form-control me-2" type="text" placeholder="Search">
+        <button class="btn btn-primary" type="button">Search</button>
+      </form>
+
+      <div class="d-flex">
+        <a class="btn btn-outline-light me-2" href="{{ url_for('register') }}">Đăng ký</a>
+        {% if session.get('user_id') %}
+          <a class="btn btn-warning" href="{{ url_for('logout') }}">Đăng xuất</a>
+        {% else %}
+          <a class="btn btn-success" href="{{ url_for('login') }}">Đăng nhập</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -32,6 +33,21 @@
     </div>
   </div>
 </nav>
+=======
+{% extends 'layout/base.html' %}
+{% block title %}Trang chủ{% endblock %}
+>>>>>>> Stashed changes
 
-</body>
-</html>
+{% block content %}
+<div class="mt-4 p-5 bg-primary text-white rounded">
+  <h1>OrderFood</h1>
+  <p>Chào mừng bạn đến hệ thống đặt món.</p>
+  {% if session.get('role') == 'customer' %}
+    <a class="btn btn-light" href="{{ url_for('customer_home') }}">Vào khu khách hàng</a>
+  {% elif session.get('role') == 'restaurant_owner' %}
+    <a class="btn btn-light" href="{{ url_for('owner_home') }}">Vào khu chủ quán</a>
+  {% else %}
+    <a class="btn btn-light" href="{{ url_for('register') }}">Bắt đầu bằng Đăng ký</a>
+  {% endif %}
+</div>
+{% endblock %}

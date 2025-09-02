@@ -1,0 +1,10 @@
+{% extends "layout/base.html" %}
+{% block title %}Khu Khách Hàng{% endblock %}
+
+{% block content %}
+<div class="mt-4 p-5 bg-light border rounded">
+  <h2>Xin chào, {{ session.get('user_email') }}</h2>
+  <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
+  <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
+</div>
+{% endblock %}
