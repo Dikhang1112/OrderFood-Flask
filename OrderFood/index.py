@@ -45,11 +45,22 @@ def register():
             return redirect(url_for("register"))
 
         hashed = generate_password_hash(password)
+        # Tạo user
         create_user(name=name, email=email, phone=phone, hashed_password=hashed, role=role)
-        flash("Đăng ký thành công! Mời đăng nhập.", "success")
-        return redirect(url_for("login"))
 
-    return render_template("register.html")
+        # LẤY user vừa tạo để đưa vào session (tuỳ DAO bạn có thể trả về user từ create_user)
+        user = get_user_by_email(email)
+
+        # ---- AUTO LOGIN ----
+        session["user_id"]    = user.user_id
+        session["user_email"] = user.email
+        role_val = getattr(user.role, "value", user.role)   # Enum hoặc str
+        session["role"] = (role_val or "").lower()
+
+        flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
+        return redirect(url_for("index"))
+
+    return render_template("auth.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -70,7 +81,7 @@ def login():
             return redirect(url_for("owner_home"))
         return redirect(url_for("customer_home"))
 
-    return render_template("login.html")
+    return render_template("auth.html")
 
 @app.route("/logout")
 def logout():

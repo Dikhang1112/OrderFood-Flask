@@ -1,7 +1,7 @@
 
 {% extends 'layout/base.html' %}
 {% block title %}Trang chủ{% endblock %}
->>>>>>> Stashed changes
+
 
 {% block content %}
 <div class="mt-4 p-5 bg-primary text-white rounded">
@@ -12,7 +12,7 @@
   {% elif session.get('role') == 'restaurant_owner' %}
     <a class="btn btn-light" href="{{ url_for('owner_home') }}">Vào khu chủ quán</a>
   {% else %}
-    <a class="btn btn-light" href="{{ url_for('register') }}">Bắt đầu bằng Đăng ký</a>
+    <a class="btn btn-light" href="{{ url_for('login') }}">Bắt đầu bằng Đăng ký</a>
   {% endif %}
 </div>
 {% endblock %}

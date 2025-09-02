@@ -15,6 +15,8 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_home') }}">Khu khách hàng</a></li>
         {% elif session.get('role') == 'restaurant_owner' %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('owner_home') }}">Khu chủ quán</a></li>
+        {% elif session.get('role') == 'admin' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_home') }}">Admin</a></li>
         {% endif %}
       </ul>
 
@@ -24,13 +26,35 @@
       </form>
 
       <div class="d-flex">
-        <a class="btn btn-outline-light me-2" href="{{ url_for('register') }}">Đăng ký</a>
-        {% if session.get('user_id') %}
-          <a class="btn btn-warning" href="{{ url_for('logout') }}">Đăng xuất</a>
+        {% if not session.get('user_id') %}
+          <!-- Chưa đăng nhập -->
+          <a class="btn btn-outline-light me-2" href="{{ url_for('login') }}">Đăng nhập</a>
         {% else %}
-          <a class="btn btn-success" href="{{ url_for('login') }}">Đăng nhập</a>
+          <!-- Đã đăng nhập: hiển thị email -->
+          <div class="dropdown me-2">
+            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {{ session.get('user_email') }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li class="dropdown-item-text"><small class="text-muted">{{ session.get('role') }}</small></li>
+              <li><hr class="dropdown-divider"></li>
+              {% if session.get('role') == 'customer' %}
+                <li><a class="dropdown-item" href="{{ url_for('customer_home') }}">Trang khách hàng</a></li>
+              {% elif session.get('role') == 'restaurant_owner' %}
+                <li><a class="dropdown-item" href="{{ url_for('owner_home') }}">Trang chủ quán</a></li>
+              {% elif session.get('role') == 'admin' %}
+                <li><a class="dropdown-item" href="{{ url_for('admin_home') }}">Trang admin</a></li>
+              {% endif %}
+              <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Đăng xuất</a></li>
+            </ul>
+          </div>
         {% endif %}
       </div>
     </div>
   </div>
 </nav>
+
+
+
+
+
