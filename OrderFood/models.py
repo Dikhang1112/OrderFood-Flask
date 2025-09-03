@@ -270,14 +270,4 @@ class Refund(db.Model):
     payment = db.relationship("Payment", backref=db.backref("refunds", cascade="all, delete-orphan"))
 
 
-<<<<<<< Updated upstream
-# =========================
-# CREATE TABLES (optional)
-# =========================
-#if __name__ == "__main__":
-   # with app.app_context():
-       # db.create_all()
-       # print("Created tables.")
-=======
 
->>>>>>> Stashed changes

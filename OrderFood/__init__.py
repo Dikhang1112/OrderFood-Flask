@@ -48,12 +48,8 @@ def create_app():
         client_kwargs={"scope": "openid email profile"},
     )
     with app.app_context():
-<<<<<<< Updated upstream
         from OrderFood import models  # noqa: F401
-=======
-        from . import models
         db.create_all()  # Tạo tất cả bảng từ model
->>>>>>> Stashed changes
 
     return app
 

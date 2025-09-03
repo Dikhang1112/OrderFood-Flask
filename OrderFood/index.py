@@ -1,18 +1,11 @@
-<<<<<<< Updated upstream
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
 
-from OrderFood import app
-=======
 from secrets import token_urlsafe
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
+from OrderFood import app, dao, oauth
 
-
-from OrderFood import app, dao, oauth, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
->>>>>>> Stashed changes
 from OrderFood.dao import *
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
