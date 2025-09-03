@@ -1,6 +1,7 @@
 
 # OrderFood/models.py
 from enum import Enum
+
 from sqlalchemy import UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from OrderFood import db
@@ -47,10 +48,11 @@ class StatusRefund(Enum):
 class User(db.Model):
     __tablename__ = "user"
 
-    user_id  = db.Column(db.Integer, primary_key=True)
+    user_id  = db.Column(db.Integer, primary_key=True,autoincrement=True)
     name     = db.Column(db.String(100), nullable=False)
     email    = db.Column(db.String(120), unique=True, index=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=True)
+    avatar = db.Column(db.String(255))  # lưu URL từ Cloudinary
     phone    = db.Column(db.String(20))
 
     role     = db.Column(SAEnum(Role, name="role_enum"), nullable=False, default=Role.CUSTOMER)
@@ -59,11 +61,14 @@ class User(db.Model):
     restaurant_owner  = db.relationship("RestaurantOwner", uselist=False, back_populates="user", cascade="all, delete-orphan")
     admin             = db.relationship("Admin",           uselist=False, back_populates="user", cascade="all, delete-orphan")
 
+    @property
+    def id(self):
+        return self.user_id
 
 class RestaurantOwner(db.Model):
     __tablename__ = "restaurant_owner"
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True,autoincrement=True)
     tax     = db.Column(db.String(50))
 
     user  = db.relationship("User", back_populates="restaurant_owner")
@@ -80,14 +85,14 @@ class RestaurantOwner(db.Model):
 class Customer(db.Model):
     __tablename__ = "customer"
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True,autoincrement=True)
     user    = db.relationship("User", back_populates="customer")
 
 
 class Admin(db.Model):
     __tablename__ = "admin"
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.user_id"), primary_key=True,autoincrement=True)
     user    = db.relationship("User", back_populates="admin")
 
     # 1 admin có thể duyệt nhiều restaurant
@@ -100,7 +105,7 @@ class Admin(db.Model):
 class Restaurant(db.Model):
     __tablename__ = "restaurant"
 
-    restaurant_id = db.Column(db.Integer, primary_key=True)
+    restaurant_id = db.Column(db.Integer, primary_key=True,autoincrement=True)
     name          = db.Column(db.String(150), nullable=False)
 
     # 1 chủ chỉ có 1 nhà hàng
@@ -130,12 +135,13 @@ class Restaurant(db.Model):
 class Dish(db.Model):
     __tablename__ = "dish"
 
-    dish_id      = db.Column(db.Integer, primary_key=True)
+    dish_id      = db.Column(db.Integer, primary_key=True,autoincrement=True)
     res_id       = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
     name         = db.Column(db.String(150), nullable=False)
     is_available = db.Column(db.Boolean, default=True, nullable=False)
     price        = db.Column(db.Float, nullable=False)
     note         = db.Column(db.String(255))
+    images      = db.Column(db.String(255))   # lưu URL từ Cloudinary
 
     restaurant = db.relationship("Restaurant", backref=db.backref("dishes", cascade="all, delete-orphan"))
 
@@ -146,7 +152,7 @@ class Dish(db.Model):
 class Cart(db.Model):
     __tablename__ = "cart"
 
-    cart_id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, primary_key=True,autoincrement=True)
 
     cus_id  = db.Column(db.Integer, db.ForeignKey("customer.user_id"),   nullable=False)
     res_id  = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
@@ -165,9 +171,9 @@ class Cart(db.Model):
 class CartItem(db.Model):
     __tablename__ = "cart_item"
 
-    cart_item_id = db.Column(db.Integer, primary_key=True)
-    cart_id      = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False)
-    dish_id      = db.Column(db.Integer, db.ForeignKey("dish.dish_id"), nullable=False)
+    cart_item_id = db.Column(db.Integer, primary_key=True,autoincrement=True)
+    cart_id      = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False,index=True)
+    dish_id      = db.Column(db.Integer, db.ForeignKey("dish.dish_id"), nullable=False,index=True)
     quantity     = db.Column(db.Integer, nullable=False, default=1)
 
     cart = db.relationship("Cart", backref=db.backref("items", cascade="all, delete-orphan"))
@@ -184,7 +190,7 @@ class CartItem(db.Model):
 class Order(db.Model):
     __tablename__ = "order"   # cân nhắc đổi thành "orders" để tránh xung đột keyword
 
-    order_id      = db.Column(db.Integer, primary_key=True)
+    order_id      = db.Column(db.Integer, primary_key=True,autoincrement=True)
     customer_id   = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
     cart_id       = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False)
@@ -206,7 +212,7 @@ class Order(db.Model):
 class Notification(db.Model):
     __tablename__ = "notification"
 
-    noti_id   = db.Column(db.Integer, primary_key=True)
+    noti_id   = db.Column(db.Integer, primary_key=True,autoincrement=True)
     order_id  = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
 
     message   = db.Column(db.String(255), nullable=False)
@@ -219,7 +225,7 @@ class Notification(db.Model):
 class OrderRating(db.Model):
     __tablename__ = "order_rating"
 
-    orating_id  = db.Column(db.Integer, primary_key=True)
+    orating_id  = db.Column(db.Integer, primary_key=True,autoincrement=True)
     order_id    = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=False)
 
@@ -236,7 +242,7 @@ class OrderRating(db.Model):
 class Payment(db.Model):
     __tablename__ = "payment"
 
-    payment_id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.Integer, primary_key=True,autoincrement=True)
     order_id   = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
 
     status     = db.Column(SAEnum(StatusPayment, name="status_payment_enum"),
@@ -248,7 +254,7 @@ class Payment(db.Model):
 class Refund(db.Model):
     __tablename__ = "refund"
 
-    refund_id    = db.Column(db.Integer, primary_key=True)
+    refund_id    = db.Column(db.Integer, primary_key=True,autoincrement=True)
     payment_id   = db.Column(db.Integer, db.ForeignKey("payment.payment_id"), nullable=False)
 
     status       = db.Column(SAEnum(StatusRefund, name="status_refund_enum"),
@@ -264,6 +270,7 @@ class Refund(db.Model):
     payment = db.relationship("Payment", backref=db.backref("refunds", cascade="all, delete-orphan"))
 
 
+<<<<<<< Updated upstream
 # =========================
 # CREATE TABLES (optional)
 # =========================
@@ -271,3 +278,6 @@ class Refund(db.Model):
    # with app.app_context():
        # db.create_all()
        # print("Created tables.")
+=======
+
+>>>>>>> Stashed changes

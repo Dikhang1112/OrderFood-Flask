@@ -1,7 +1,18 @@
+<<<<<<< Updated upstream
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from OrderFood import app
+=======
+from secrets import token_urlsafe
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_user, logout_user, login_required, current_user
+
+
+from OrderFood import app, dao, oauth, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+>>>>>>> Stashed changes
 from OrderFood.dao import *
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
@@ -54,6 +65,7 @@ def register():
         # ---- AUTO LOGIN ----
         session["user_id"]    = user.user_id
         session["user_email"] = user.email
+        session["user_name"] = user.name
         role_val = getattr(user.role, "value", user.role)   # Enum hoặc str
         session["role"] = (role_val or "").lower()
 
@@ -75,6 +87,7 @@ def login():
 
         session["user_id"] = user.user_id
         session["user_email"] = user.email
+        session["user_name"] = user.name
         session["role"] = _role_to_str(user.role)
 
         if is_owner(user.role):
@@ -107,6 +120,60 @@ def admin_home():
         flash("Bạn không có quyền truy cập trang admin", "danger")
         return redirect(url_for("index"))
     return render_template("admin_home.html")
+# ================= GOOGLE LOGIN =================
+
+@app.route("/login/google")
+def login_google():
+    redirect_uri = url_for("google_callback", _external=True)
+    nonce = token_urlsafe(16)
+    session["oidc_nonce"] = nonce
+    # prompt=consent là tùy chọn
+    return oauth.google.authorize_redirect(
+        redirect_uri,
+        nonce=nonce,
+        prompt="consent",
+    )
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    token = oauth.google.authorize_access_token()
+    nonce = session.pop("oidc_nonce", None)
+    userinfo = oauth.google.parse_id_token(token, nonce=nonce)
+
+    if not userinfo or "email" not in userinfo:
+        flash("Không lấy được thông tin Google", "danger")
+        return redirect(url_for("login"))
+
+    email = userinfo["email"].lower()
+    display_name = userinfo.get("name") or userinfo.get("given_name") or email.split("@")[0]
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(
+            email=email,
+            name=display_name,
+            avatar=userinfo.get("picture"),
+            role="CUSTOMER",
+        )
+        db.session.add(user)
+        db.session.commit()
+    else:
+        if not user.name and display_name:
+            user.name = display_name
+            db.session.commit()
+
+    # ĐĂNG NHẬP
+    session["user_id"]    = user.user_id          # <- đừng dùng user.id
+    session["user_email"] = user.email
+    session["user_name"]  = user.name or display_name or user.email
+    session["role"]       = _role_to_str(user.role).lower()
+
+    flash("Đăng nhập bằng Google thành công!", "success")
+    return redirect(url_for("customer_home"))
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

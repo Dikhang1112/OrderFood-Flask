@@ -3,8 +3,37 @@
 
 {% block content %}
 <div class="mt-4 p-5 bg-light border rounded">
-  <h2>Xin chào, {{ session.get('user_email') }}</h2>
-  <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
-  <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
+    <h2>
+        Xin chào,
+        {{ session.get('user_name')
+        or (session.get('user_email') and session.get('user_email').split('@')[0])
+        or 'bạn' }}
+    </h2>
+    <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
+    <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
 </div>
+<<<<<<< Updated upstream
+=======
+
+<div class="container mt-4">
+    <h3>Danh sách 50 nhà hàng</h3>
+    {% if restaurants %}
+    <div class="row">
+        {% for res in restaurants %}
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ res.name }}</h5>
+                    <p class="card-text">{{ res.address }}</p>
+                    <a href="/restaurant/{{res.restaurant_id}}" class="btn btn-primary">Xem chi tiết</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>Chưa có nhà hàng nào trong hệ thống.</p>
+    {% endif %}
+</div>
+>>>>>>> Stashed changes
 {% endblock %}
