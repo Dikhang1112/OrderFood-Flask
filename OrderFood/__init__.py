@@ -48,8 +48,9 @@ def create_app():
         client_kwargs={"scope": "openid email profile"},
     )
     with app.app_context():
-        from OrderFood import models  # noqa: F401
-        db.create_all()  # Tạo tất cả bảng từ model
+        from OrderFood import models
+        db.create_all()#
+
 
     return app
 

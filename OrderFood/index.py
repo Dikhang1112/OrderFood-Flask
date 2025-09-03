@@ -1,12 +1,13 @@
 
+
 from secrets import token_urlsafe
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from OrderFood import app, dao, oauth
-
 from OrderFood.dao import *
+from OrderFood.models import Restaurant
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
@@ -21,15 +22,28 @@ def _role_to_str(r):
     return getattr(r, "value", r)
 
 def is_customer(role: str) -> bool:
-    return role in ("customer", "CUSTOMER")
+    # return role in ("customer", "CUSTOMER")
+    rolestr = _role_to_str(role)
+    return (rolestr or "").lower() == "customer"
 
 def is_owner(role: str) -> bool:
-    return role in ("restaurant_owner", "RESTAURANT_OWNER")
+    # return role in ("restaurant_owner", "RESTAURANT_OWNER")
+    rolestr = _role_to_str(role)
+    return (rolestr or "").lower() == "restaurant_owner"
+
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    keyword = (request.args.get('search') or '').strip()
+    if not keyword:
+        return render_template("customer_home.html", restaurants=[])
+    restaurants_by_name = dao.get_restaurants_by_name(keyword)
+    restaurants_by_dishes = dao.get_restaurants_by_dishes_name(keyword)
+    all_restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
+    print(all_restaurants)
+    return render_template("customer_home.html", restaurants=all_restaurants)
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -99,13 +113,31 @@ def logout():
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
-    return render_template("customer_home.html")
+    restaurants = Restaurant.query.limit(50).all()
+    return render_template("customer_home.html",restaurants=restaurants)
+
+@app.route("/restaurant/<int:restaurant_id>")
+def restaurant_detail(restaurant_id):
+    res = dao.get_restaurant_by_id(restaurant_id)
+    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
+    return render_template("/customer/restaurant_detail.html", res=res, dishes = dishes)
 
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
         return redirect(url_for("login"))
     return render_template("owner_home.html")
+
+# chỉnh sửa thực đơn của owner
+@app.route("/owner/menu")
+# @login_required
+def get_menu():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    dishes = load_menu_owner(user_id)
+    return render_template("owner/menu.html", dishes=dishes)
 
 @app.route("/admin")
 def admin_home():
@@ -164,6 +196,7 @@ def google_callback():
 
     flash("Đăng nhập bằng Google thành công!", "success")
     return redirect(url_for("customer_home"))
+
 
 
 

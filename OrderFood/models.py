@@ -6,6 +6,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from OrderFood import db
 
+
 # =========================
 # ENUMS
 # =========================
