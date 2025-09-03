@@ -2,38 +2,87 @@
 {% block title %}Chi tiết nhà hàng{% endblock %}
 
 {% block content %}
+<!--<div class="container mt-4">-->
+<!--    {%if res%}-->
+<!--    <h3>{{ res.name }}</h3>-->
+<!--    <p><strong>Địa chỉ:</strong> {{ res.address }}</p>-->
+<!--    <hr>-->
+<!--    <h4>Thực đơn</h4>-->
+<!--        {% if dishes %}-->
+<!--        <table class="table table-bordered mt-3">-->
+<!--            <thead class="table-light">-->
+<!--            <tr>-->
+<!--                <th>Tên món</th>-->
+<!--                <th>Mô tả</th>-->
+<!--                <th>Giá</th>-->
+<!--            </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--            {% for dish in dishes %}-->
+<!--            <tr>-->
+<!--                <td>{{ dish.name }}</td>-->
+<!--                <td>{{ dish.note }}</td>-->
+<!--                <td>{{ dish.price }} đ</td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--        {% else %}-->
+<!--        <p>Nhà hàng này chưa có món ăn nào.</p>-->
+<!--        {% endif %}-->
+<!--    {%else%}-->
+<!--         <p>Không có nhà hàng thóa yêu cầu</p>-->
+
+<!--    {%endif%}-->
+
+<!--</div>-->
+
 <div class="container mt-4">
-    {%if restaurants%}
-    <h3>{{ restaurants.name }}</h3>
-    <p><strong>Địa chỉ:</strong> {{ restaurants.address }}</p>
-    <hr>
-    <h4>Thực đơn</h4>
+    {% if res %}
+        <div class="text-center mb-4">
+            <h3>{{ res.name }}</h3>
+            <p><strong>Địa chỉ:</strong> {{ res.address }}</p>
+        </div>
+        <hr>
+        <h4 class="mb-3">Thực đơn</h4>
+
         {% if dishes %}
-        <table class="table table-bordered mt-3">
-            <thead class="table-light">
-            <tr>
-                <th>Tên món</th>
-                <th>Mô tả</th>
-                <th>Giá</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for dish in dishes %}
-            <tr>
-                <td>{{ dish.name }}</td>
-                <td>{{ dish.note }}</td>
-                <td>{{ dish.price }} đ</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+            <div class="d-flex flex-column align-items-center">
+                {% for dish in dishes %}
+                    <div class="card mb-3 w-75">
+                        <div class="row g-0 align-items-center">
+                            <!-- Hình ảnh món ăn bên trái -->
+                            <div class="col-md-3">
+                                {% if dish.image %}
+                                <img src="{{ dish.image }}" class="img-fluid rounded-start" alt="{{ dish.name }}" style="height:120px; object-fit:cover;">
+                                {% else %}
+                                <img src="https://via.placeholder.com/120x120?text=No+Image" class="img-fluid rounded-start" alt="No Image">
+                                {% endif %}
+                            </div>
+                            <!-- Tên và note ở giữa -->
+                            <div class="col-md-6">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ dish.name }}</h5>
+                                    <p class="card-text">{{ dish.note }}</p>
+                                </div>
+                            </div>
+                            <!-- Giá và nút thêm vào giỏ bên phải -->
+                            <div class="col-md-3 text-center">
+                                <div class="card-body">
+                                    <p class="fw-bold">{{ dish.price }} đ</p>
+                                    <a href="/cart/add/{{ dish.dish_id }}" class="btn btn-success btn-sm">Thêm vào giỏ</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         {% else %}
-        <p>Nhà hàng này chưa có món ăn nào.</p>
+            <p class="text-center">Nhà hàng này chưa có món ăn nào.</p>
         {% endif %}
-    {%else%}
-         <p>Không có nhà hàng thóa yêu cầu</p>
-
-    {%endif%}
-
+    {% else %}
+        <p class="text-center">Không có nhà hàng thỏa yêu cầu</p>
+    {% endif %}
 </div>
 {%endblock%}
+

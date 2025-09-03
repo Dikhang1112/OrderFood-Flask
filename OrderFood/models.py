@@ -3,7 +3,7 @@
 from enum import Enum
 
 from sqlalchemy import UniqueConstraint
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Enum as SAEnum, String, Integer, String, Text, Boolean, Float
 from OrderFood import db
 
 
@@ -120,7 +120,7 @@ class Restaurant(db.Model):
     open_hour  = db.Column(db.String(20))
     close_hour = db.Column(db.String(20))
     status     = db.Column(SAEnum(StatusRes, name="status_res_enum"), nullable=False, default=StatusRes.PENDING)
-
+    image = db.Column(String(255))
     # null khi chưa duyệt
     by_admin_id  = db.Column(db.Integer, db.ForeignKey("admin.user_id"), nullable=True)
     address      = db.Column(db.String(255))
@@ -128,6 +128,7 @@ class Restaurant(db.Model):
 
     owner       = db.relationship("RestaurantOwner", back_populates="restaurant")
     approved_by = db.relationship("Admin", back_populates="restaurants_approved")
+
 
 
 # =========================
@@ -143,7 +144,6 @@ class Dish(db.Model):
     price        = db.Column(db.Float, nullable=False)
     note         = db.Column(db.String(255))
     images      = db.Column(db.String(255))   # lưu URL từ Cloudinary
-
     restaurant = db.relationship("Restaurant", backref=db.backref("dishes", cascade="all, delete-orphan"))
 
 

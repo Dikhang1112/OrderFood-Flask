@@ -41,11 +41,16 @@
     <div class="row">
       {% for res in restaurants %}
         <div class="col-md-4 mb-3">
-          <div class="card">
+         <div class="card h-100">
+            {% if res.image %}
+            <img src="{{ res.image }}" class="card-img-top" alt="{{ res.name }}" style="height: 200px; object-fit: cover;">
+            {% else %}
+            <img src="https://via.placeholder.com/400x200?text=No+Image" class="card-img-top" alt="No image">
+            {% endif %}
             <div class="card-body">
-              <h5 class="card-title">{{ res.name }}</h5>
+              <h5 class="card-title mt-2">{{ res.name }}</h5>
               <p class="card-text">{{ res.address }}</p>
-              <a href="/restaurant/{{res.restaurant_id}}" class="btn btn-primary">Xem chi tiết</a>
+              <a href="/restaurant/{{ res.restaurant_id }}" class="btn btn-primary">Xem chi tiết</a>
             </div>
           </div>
         </div>
