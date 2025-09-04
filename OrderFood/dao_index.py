@@ -61,9 +61,6 @@ def get_restaurants_by_name(name: str = None):
         return []
     name = name.strip()
     return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%")).all()
-    # return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%"))
-
-
 
 
 def get_restaurants_by_dishes_name(dishes_name: str = None):
@@ -71,4 +68,9 @@ def get_restaurants_by_dishes_name(dishes_name: str = None):
         func.lower(Dish.name).like(f"%{dishes_name.lower()}%")).all()
     restaurants = list({dish.restaurant.restaurant_id: dish.restaurant for dish in dishes if dish.restaurant}.values())
     return restaurants
+
+def get_all_restaurants_ordered_by_rating(descending=True):
+    if descending:
+        return Restaurant.query.order_by(Restaurant.rating.desc()).all()
+    return Restaurant.query.order_by(Restaurant.rating.asc()).all()
 

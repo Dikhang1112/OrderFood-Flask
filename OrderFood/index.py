@@ -2,7 +2,7 @@
 from secrets import token_urlsafe
 from flask import  render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from OrderFood import app, dao, oauth
+from OrderFood import app, dao_index, oauth
 from OrderFood.dao_index import *
 from OrderFood.models import Restaurant
 from adminService import is_admin
@@ -35,10 +35,12 @@ def index():
     keyword = (request.args.get('search') or '').strip()
     if not keyword:
         return render_template("customer_home.html", restaurants=[])
-    restaurants_by_name = dao.get_restaurants_by_name(keyword)
-    restaurants_by_dishes = dao.get_restaurants_by_dishes_name(keyword)
+
+    restaurants_by_name = dao_index.get_restaurants_by_name(keyword)
+    restaurants_by_dishes = dao_index.get_restaurants_by_dishes_name(keyword)
+
     all_restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
-    print(all_restaurants)
+    all_restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
     return render_template("customer_home.html", restaurants=all_restaurants)
 
 
@@ -117,7 +119,7 @@ def customer_home():
 
 @app.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
-    res = dao.get_restaurant_by_id(restaurant_id)
+    res = dao_index.get_restaurant_by_id(restaurant_id)
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     return render_template("/customer/restaurant_detail.html", res=res, dishes = dishes)
 
