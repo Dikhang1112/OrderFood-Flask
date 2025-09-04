@@ -1,13 +1,12 @@
 
-
 from secrets import token_urlsafe
-
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import  render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import login_user, logout_user, login_required, current_user
 from OrderFood import app, dao, oauth
-from OrderFood.dao import *
+from OrderFood.dao_index import *
 from OrderFood.models import Restaurant
+from adminService import is_admin
+
 
 ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
@@ -30,8 +29,6 @@ def is_owner(role: str) -> bool:
     # return role in ("restaurant_owner", "RESTAURANT_OWNER")
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "restaurant_owner"
-
-
 
 @app.route("/")
 def index():
@@ -99,6 +96,8 @@ def login():
 
         if is_owner(user.role):
             return redirect(url_for("owner_home"))
+        if is_admin(user.role):
+            return redirect(url_for("admin.admin_home"))
         return redirect(url_for("customer_home"))
 
     return render_template("auth.html")
@@ -122,6 +121,7 @@ def restaurant_detail(restaurant_id):
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     return render_template("/customer/restaurant_detail.html", res=res, dishes = dishes)
 
+
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
@@ -139,12 +139,6 @@ def get_menu():
     dishes = load_menu_owner(user_id)
     return render_template("owner/menu.html", dishes=dishes)
 
-@app.route("/admin")
-def admin_home():
-    if session.get("role") not in ("ADMIN", "admin"):
-        flash("Bạn không có quyền truy cập trang admin", "danger")
-        return redirect(url_for("index"))
-    return render_template("admin_home.html")
 # ================= GOOGLE LOGIN =================
 
 @app.route("/login/google")

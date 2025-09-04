@@ -1,7 +1,6 @@
 
 # OrderFood/models.py
 from enum import Enum
-
 from sqlalchemy import UniqueConstraint
 from sqlalchemy import Enum as SAEnum, String, Integer, String, Text, Boolean, Float
 from OrderFood import db
@@ -143,7 +142,7 @@ class Dish(db.Model):
     is_available = db.Column(db.Boolean, default=True, nullable=False)
     price        = db.Column(db.Float, nullable=False)
     note         = db.Column(db.String(255))
-    images      = db.Column(db.String(255))   # lưu URL từ Cloudinary
+    image      = db.Column(db.String(255))   # lưu URL từ Cloudinary
     restaurant = db.relationship("Restaurant", backref=db.backref("dishes", cascade="all, delete-orphan"))
 
 

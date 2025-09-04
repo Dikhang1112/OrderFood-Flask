@@ -1,0 +1,141 @@
+:root{
+  --sb-bg: #363636;          /* slate-900 */
+  --sb-fg: #e2e8f0;          /* slate-200 */
+  --sb-fg-dim: #94a3b8;      /* slate-400 */
+  --sb-accent: #22d3ee;      /* cyan-400 */
+  --sb-hover: #4F4F4F;       /* slate-800 */
+  --sb-width: 240px;
+  --sb-width-collapsed: 72px;
+  --shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+* { box-sizing: border-box; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  color:#0f172a;
+  background:#f8fafc;
+}
+
+/* Layout */
+.sidebar{
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sb-width);
+  background: var(--sb-bg);
+  color: var(--sb-fg);
+  display: flex;
+  flex-direction: column;
+  transition: width .2s ease;
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  overflow-x:hidden;
+}
+.sidebar[data-state="collapsed"]{
+  width: var(--sb-width-collapsed);
+}
+
+.page{
+  margin-left: var(--sb-width);
+  padding: 24px 28px;
+  transition: margin-left .2s ease;
+}
+.sidebar[data-state="collapsed"] ~ .page{
+  margin-left: var(--sb-width-collapsed);
+}
+
+/* Header */
+.sb__header{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sb__toggle{
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  background: transparent; color: var(--sb-fg);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px; cursor: pointer;
+}
+.sb__toggle:hover{ background: var(--sb-hover); }
+
+.sb__brand{
+  display: flex; align-items: center; gap: 10px;
+  overflow: hidden;
+}
+.sb__title{
+  font-weight: 700; letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* Icons */
+.ic{ width: 20px; height: 20px; display: inline-block; }
+
+/* Nav */
+.sb__nav{
+  padding: 10px 8px;
+  display: flex; flex-direction: column; gap: 6px;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+.sb__item{
+  --pad-x: 12px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px var(--pad-x);
+  color: var(--sb-fg);
+  text-decoration: none; border-radius: 12px;
+  position: relative;
+}
+.sb__item:hover{
+background: var(--sb-hover);
+ }
+.sb__item .sb__icon{
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  color: var(--sb-fg);
+  color: var(--sb-fg); opacity: .95;
+  white-space: nowrap;
+}
+.sb__text:hover{
+  color: var(--sb-fg);
+}
+
+
+/* Collapsed state: ẩn chữ, chỉ còn icon */
+.sidebar[data-state="collapsed"] .sb__title,
+.sidebar[data-state="collapsed"] .sb__text{
+  display: none;
+}
+
+/* Tooltip khi collapsed */
+.sidebar[data-state="collapsed"] .sb__item::after{
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%; transform: translateY(-50%);
+  background: #111827; color: #e5e7eb;
+  padding: 6px 10px; border-radius: 8px;
+  font-size: 13px; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+  transform-origin: left center;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
+}
+.sidebar[data-state="collapsed"] .sb__item:hover::after{
+  opacity: 1; transform: translateY(-50%) translateX(0);
+}
+
+/* Focus ring (a11y) */
+.sb__item:focus-visible,
+.sb__toggle:focus-visible{
+  outline: 2px solid var(--sb-accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* Scroll */
+.sidebar{ overflow: hidden; }
+.sb__nav{ overflow-y: auto; }

@@ -1,14 +1,12 @@
-import cloudinary
-import werkzeug
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import quote
 from dotenv import load_dotenv
 import cloudinary
 from authlib.integrations.flask_client import OAuth
-
 import os
 from werkzeug.security import generate_password_hash
+from OrderFood.helper.NotiHelper import init_app as init_noti
 
 
 
@@ -36,7 +34,9 @@ def create_app():
                       api_key='265111814635295',
                       api_secret='5G5OpHo38qsK_si-A49j4eAjpOA')
     db.init_app(app)
-
+    from OrderFood import adminService
+    app.register_blueprint(adminService.admin_bp)
+    init_noti(app)
     # Cấu hình Cloudinary
     cloudinary.config(
         cloud_name=CLOUDINARY_CLOUD_NAME,
@@ -56,7 +56,7 @@ def create_app():
     with app.app_context():
         from OrderFood import models
 
-        db.create_all()#
+        db.create_all()
 
         db.session.query(models.CartItem).delete()
         db.session.query(models.Cart).delete()
@@ -99,9 +99,9 @@ def create_app():
         db.session.add_all([ad1, ad2])
         db.session.commit()
 
-        res1 = models.Restaurant(restaurant_id = 1, name='res1', res_owner_id = owner1.user_id, status = 'APPROVED', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res3_uezgk3.jpg", by_admin_id = a1.user_id)
-        res2 = models.Restaurant(restaurant_id = 2, name='res2', res_owner_id = owner2.user_id, status = 'APPROVED', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res2_gkskxx.jpg", by_admin_id = a2.user_id)
-        res3 = models.Restaurant(restaurant_id = 3, name='res3', res_owner_id = owner3.user_id, status = 'APPROVED', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg", by_admin_id = a1.user_id)
+        res1 = models.Restaurant(restaurant_id = 1, name='Nha hang 1', res_owner_id = owner1.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res3_uezgk3.jpg", by_admin_id = a1.user_id,address='Vinh Long')
+        res2 = models.Restaurant(restaurant_id = 2, name='Nha hang 2', res_owner_id = owner2.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res2_gkskxx.jpg", by_admin_id = a2.user_id,address= 'Ho Chi Minh')
+        res3 = models.Restaurant(restaurant_id = 3, name='Nha hang 3', res_owner_id = owner3.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg", by_admin_id = a1.user_id,address = 'Da Lat')
 
         db.session.add_all([res1, res2, res3])
         db.session.commit()

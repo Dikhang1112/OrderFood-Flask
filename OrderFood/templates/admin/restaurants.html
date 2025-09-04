@@ -1,0 +1,92 @@
+{% include "/admin/sidebar.html" %}
+<head>
+    <script src="{{ url_for('static', filename='js/admin/manageRestaurant.js') }}"></script>
+</head>
+<main class="page">
+    <div class="container-fluid mt-4">
+        <h2 class="mb-4">Danh sách Nhà hàng</h2>
+
+        <!-- link CSS riêng cho lưới -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listRestaurant.css') }}"/>
+
+        <table class="rs-table table table-hover align-middle">
+            <thead class="rs-thead">
+            <tr class="rs-row-head">
+                <th class="rs-col-id">ID</th>
+                <th class="rs-col-name">Tên nhà hàng</th>
+                <th class="rs-col-addr">Địa chỉ</th>
+                <th class="rs-col-status">Trạng thái</th>
+                <th class="rs-col-rating">Đánh giá</th>
+                <th class="rs-col-action">Action</th> <!-- yêu cầu thêm -->
+            </tr>
+            </thead>
+
+            <tbody class="rs-body">
+            {% for r in restaurants %}
+            <tr class="rs-row">
+                <td class="rs-col rs-col--id">
+                    <div class="rs-id">#{{ r.restaurant_id }}</div>
+                </td>
+                <td class="rs-col rs-col--name">
+                    <div class="rs-card">
+                        <div class="rs-info">
+                            <div class="rs-title">{{ r.name }}</div>
+                            {% if r.owner and r.owner.user %}
+                            <div class="rs-sub">Owner: {{ r.owner.user.name }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+
+                <td class="rs-col rs-col--addr">
+                    {{ r.address or "—" }}
+                </td>
+
+                <td class="rs-col rs-col--status">
+                    {% if r.status %}
+                    <span class="rs-badge rs-badge--{{ 'ok' if r.status.value=='APPROVED'
+                                                else 'warn' if r.status.value=='PENDING'
+                                                else 'err' }}">
+                {{ r.status.value }}
+              </span>
+                    {% endif %}
+                </td>
+                <td class="rs-col rs-col--rating">
+                    {{ "{:.1f}".format(r.rating_point) if r.rating_point else "Không" }}
+                </td>
+                <td class="rs-col rs-col--action">
+                    <button class="rs-action rs-action--approve" title="Approve" data-id="{{ r.restaurant_id }}">
+                        <!-- icon check -->
+                        <svg viewBox="0 0 24 24" class="ic">
+                            <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="rs-action rs-action--reject" title="Reject" data-id="{{ r.restaurant_id }}">
+                        <!-- icon x -->
+                        <svg viewBox="0 0 24 24" class="ic">
+                            <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2"
+                                  stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">Không có nhà hàng nào.</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if noti_assets is defined %}
+        {{ noti_assets() }}
+        {% else %}
+        <!-- fallback: ít nhất load toast.js để không lỗi JS -->
+        <div id="toast-stack"></div>
+        <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+        {% endif %}
+
+    </div>
+</main>
+
+

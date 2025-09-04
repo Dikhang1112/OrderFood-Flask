@@ -1,0 +1,152 @@
+:root{
+  --rs-gap: 14px;
+  --rs-card-bg: #0f172a;        /* slate-900 */
+  --rs-card-fg: #e2e8f0;        /* slate-200 */
+  --rs-bd: rgba(0,0,0,.06);
+  --rs-ok: #16a34a;
+  --rs-warn: #f59e0b;
+  --rs-err: #ef4444;
+  --rs-accent: #22d3ee;
+  --rs-cols: 64px 180px 180px 160px 180px 140px; /* ID | name | addr | status | rating | action */
+}
+}
+.rs-table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Header giữ dạng hàng đơn giản */
+.rs-row-head{
+  display:grid;
+  grid-template-columns: 60px 280px 280px 200px 240px 200px;
+  align-items:center;
+  background:#111827;
+  color:#e5e7eb;
+  border-radius:12px 12px 0 0;
+}
+.rs-row-head th{
+  padding:12px 14px;
+  font-weight:700;
+  white-space:nowrap;
+  width:auto;
+  text-align:left;
+}
+/* Body: mỗi <tr> sẽ hiển thị như card + grid */
+.rs-body .rs-row{
+  display: grid;
+  grid-template-columns: 60px 250px 280px 180px 220px 250px;
+  gap: var(--rs-gap);
+  align-items: center;
+  background: #fff;
+  margin-bottom: 10px;
+  border: 1px solid var(--rs-bd);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(2,8,20,.04);
+}
+.rs-body .rs-row td{
+  border: none !important;
+  padding: 0;
+}
+
+.rs-col--id { text-align: center; }
+.rs-id{
+  font-weight: 700;
+  color: #111827;
+  font-size: 14px;     /* tùy chọn: làm nhỏ chữ */
+}
+
+/* Card name + thumbnail */
+.rs-card{
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+.rs-thumb{
+  width: 72px; height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+  border: 1px solid rgba(0,0,0,.06);
+}
+.rs-thumb--placeholder{
+  width: 72px; height: 72px;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+}
+.rs-title{
+  font-weight: 700;
+  color: #0f172a;
+}
+.rs-sub{
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* Badge trạng thái */
+.rs-badge{
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.rs-badge--ok{ background: var(--rs-ok); }
+.rs-badge--warn{ background: var(--rs-warn); }
+.rs-badge--err{ background: var(--rs-err); }
+
+/* Action buttons */
+.ic{ width: 18px; height: 18px; display: inline-block; }
+
+.rs-action{
+  display: inline-grid; place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(2,8,20,.08);
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  transition: transform .08s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+  margin-right: 8px;
+}
+.rs-action:hover{ transform: translateY(-1px); }
+.rs-action--approve:hover{ background: rgba(22,163,74,.09); color: #065f46; }
+.rs-action--reject:hover{ background: rgba(239,68,68,.09); color: #991b1b; }
+
+/* Responsive: thu hẹp cột để vừa mobile */
+@media (max-width: 1200px){
+  .rs-body .rs-row{
+    grid-template-columns: 70px 1.3fr 1fr 120px 90px 110px;
+  }
+}
+@media (max-width: 992px){
+  .rs-body .rs-row{
+    grid-template-columns: 60px 1fr 1fr 110px 80px 100px;
+  }
+  .rs-card{ grid-template-columns: 56px 1fr; }
+  .rs-thumb, .rs-thumb--placeholder{ width:56px; height:56px; }
+}
+@media (max-width: 768px){
+  /* Stack bớt cột cho mobile, vẫn giữ Action */
+  .rs-body .rs-row{
+    grid-template-columns: 60px 1fr 1fr;
+    grid-auto-rows: auto;
+    gap: 10px 12px;
+  }
+  .rs-col--status{ order: 4; }
+  .rs-col--rating{ order: 5; }
+  .rs-col--action{ order: 6; }
+  .rs-col--addr{ display:none; } /* ẩn địa chỉ trên mobile, có thể bật nếu muốn */
+}
+
+/* Ẩn đường kẻ bảng mặc định */
+.rs-table .table-dark{ display: table-header-group; } /* vẫn hiện header */
+.table-dark th{ border: none !important; }

@@ -1,7 +1,6 @@
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-
 from OrderFood.models import db, User, Dish, RestaurantOwner, Restaurant
 
 ENUM_UPPERCASE = True  # True nếu DB dùng 'CUSTOMER','RESTAURANT_OWNER'
