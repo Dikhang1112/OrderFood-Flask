@@ -2,40 +2,122 @@
 {% block title %}Khu Khách Hàng{% endblock %}
 
 {% block content %}
-<div class="mt-4 p-5 bg-light border rounded">
-    <h2>
-        Xin chào,
-        {{ session.get('user_name')
-        or (session.get('user_email') and session.get('user_email').split('@')[0])
-        or 'bạn' }}
-    </h2>
-    <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
-    <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
-</div>
 
 <div class="container mt-4">
-  <h3>Danh sách 50 nhà hàng</h3>
-  {% if restaurants %}
-    <div class="row">
-      {% for res in restaurants %}
-        <div class="col-md-4 mb-3">
-         <div class="card h-100">
-            {% if res.image %}
-            <img src="{{ res.image }}" class="card-img-top" alt="{{ res.name }}" style="height: 200px; object-fit: cover;">
-            {% else %}
-            <img src="https://via.placeholder.com/400x200?text=No+Image" class="card-img-top" alt="No image">
-            {% endif %}
-            <div class="card-body">
-              <h5 class="card-title mt-2">{{ res.name }}</h5>
-              <p class="card-text">{{ res.address }}</p>
-              <a href="/restaurant/{{ res.restaurant_id }}" class="btn btn-primary">Xem chi tiết</a>
-            </div>
-          </div>
+    <h3 class="mb-3" style="font-size: 1.5rem;">Danh sách 50 nhà hàng</h3>
+
+    <!-- Bộ lọc -->
+    <form method="get" action="" class="row mb-3 g-2 align-items-center" style="font-size: 1rem;">
+        <!-- Search -->
+        <div class="col-auto">
+            <input type="text" name="search" value="{{ request.args.get('search', '') }}"
+                   class="form-control"
+                   placeholder="Tìm theo tên hoặc địa chỉ..."
+                   style="width: 240px; font-size: 1rem;">
         </div>
-      {% endfor %}
+
+        <!-- Rating -->
+        <div class="col-auto">
+            <select name="rating" class="form-select" style="width: 150px; font-size: 1rem;">
+                <option value="">Đánh giá</option>
+                <option value="4" {% if request.args.get(
+                'rating') == '4' %}selected{% endif %}>Từ 4 sao</option>
+                <option value="3" {% if request.args.get(
+                'rating') == '3' %}selected{% endif %}>Từ 3 sao</option>
+                <option value="2" {% if request.args.get(
+                'rating') == '2' %}selected{% endif %}>Từ 2 sao</option>
+            </select>
+        </div>
+
+        <!-- Location -->
+        <!-- Location -->
+        <div class="col-auto">
+            <select name="location" class="form-select" style="width: 170px; font-size: 1rem;">
+                <option value="">Địa điểm</option>
+                {% for loc in locations %}
+                <option value="{{ loc }}" {% if request.args.get(
+                'location') == loc %}selected{% endif %}>{{ loc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <!-- Button -->
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary" style="font-size: 1rem;">Lọc</button>
+        </div>
+    </form>
+
+    {% if restaurants %}
+    <div class="row row-cols-2 row-cols-md-5 g-3">
+        {% for res in restaurants %}
+        <div class="col">
+            <a href="/restaurant/{{ res.restaurant.restaurant_id }}" class="text-decoration-none text-dark">
+                <div class="card transition-card h-100 rounded-3 shadow-sm border-0">
+                    {% if res.restaurant.image %}
+                    <img src="{{ res.restaurant.image }}" class="card-img-top rounded-top-3"
+                         alt="{{ res.restaurant.name }}" style="height: 150px; object-fit: cover;">
+                    {% else %}
+                    <img src="https://via.placeholder.com/300x150?text=No+Image"
+                         class="card-img-top rounded-top-3" alt="No image">
+                    {% endif %}
+
+                    <div class="card-body p-2" style="font-size: 1rem;">
+                        <h6 class="card-title text-truncate mb-1" style="font-size: 1.1rem; font-weight: 600;">
+                            {{ res.restaurant.name }}
+                        </h6>
+                        <p class="card-text text-muted mb-2 text-truncate" style="font-size: 0.95rem;">
+                            {{ res.restaurant.address }}
+                        </p>
+
+                        <div class="rating" style="font-size: 1rem;">
+                            {% for _ in range(res.stars.full) %}
+                            <i class="fas fa-star text-warning"></i>
+                            {% endfor %}
+                            {% if res.stars.half %}
+                            <i class="fas fa-star-half-alt text-warning"></i>
+                            {% endif %}
+                            {% for _ in range(res.stars.empty) %}
+                            <i class="far fa-star text-secondary"></i>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
     </div>
-  {% else %}
-    <p>Chưa có nhà hàng nào trong hệ thống.</p>
-  {% endif %}
+    {% set total_pages = (total // per_page) + (1 if total % per_page else 0) %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% else %}
+    <p style="font-size: 1rem;">Chưa có nhà hàng nào trong hệ thống.</p>
+    {% endif %}
 </div>
 {% endblock %}
+
+{% block scripts %}
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+{% endblock %}
+

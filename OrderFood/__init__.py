@@ -7,6 +7,7 @@ from authlib.integrations.flask_client import OAuth
 import os
 from werkzeug.security import generate_password_hash
 from OrderFood.helper.NotiHelper import init_app as init_noti
+from flask_login import LoginManager
 
 
 
@@ -27,7 +28,7 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-please-change-me")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4' % quote('Admin@123')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4' % quote('admin@123')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
     cloudinary.config(cloud_name='dlwjqml4p',
@@ -58,61 +59,129 @@ def create_app():
 
         db.create_all()
 
+        # Xóa dữ liệu cũ
         db.session.query(models.CartItem).delete()
         db.session.query(models.Cart).delete()
         db.session.query(models.Dish).delete()
+        db.session.query(models.Category).delete()
         db.session.query(models.Restaurant).delete()
         db.session.query(models.RestaurantOwner).delete()
         db.session.query(models.Admin).delete()
+        db.session.query(models.Customer).delete()
         db.session.query(models.User).delete()
         db.session.commit()
-
-
 
         password = '123'
         password = generate_password_hash(password)
 
-        u1 =models.User(user_id = 1, name = 'cus1', email = 'cus1@gmail.com', password = password, role='CUSTOMER')
-        u2 =models.User(user_id = 2, name = 'cus2', email = 'cus2@gmail.com', password = password, role='CUSTOMER')
-        u3 =models.User(user_id = 3, name = 'cus3', email = 'cus3@gmail.com', password = password, role='CUSTOMER')
+        # ========== CUSTOMERS ==========
+        u1 = models.User(user_id=1, name="cus1", email="cus1@gmail.com", password=password, role="CUSTOMER")
+        u2 = models.User(user_id=2, name="cus2", email="cus2@gmail.com", password=password, role="CUSTOMER")
+        u3 = models.User(user_id=3, name="cus3", email="cus3@gmail.com", password=password, role="CUSTOMER")
 
-        ro1 =models.User(user_id = 4, name = 'ro1', email = 'ro1@gmail.com', password = password, role='RESTAURANT_OWNER')
-        ro2 =models.User(user_id = 5, name = 'ro2', email = 'ro2@gmail.com', password = password, role='RESTAURANT_OWNER')
-        ro3 =models.User(user_id = 6, name = 'ro3', email = 'ro3@gmail.com', password = password, role='RESTAURANT_OWNER')
 
-        a1 = models.User(user_id=7, name='a1', email='a1@gmail.com', password=password, role='ADMIN')
-        a2 = models.User(user_id=8, name='a2', email='a2@gmail.com', password=password, role='ADMIN')
 
-        db.session.add_all([u1, u2, u3, ro1, ro2, ro3, a1, a2])
+        # ========== ADMINS ==========
+        a1 = models.User(user_id=4, name="a1", email="a1@gmail.com", password=password, role="ADMIN")
+        a2 = models.User(user_id=5, name="a2", email="a2@gmail.com", password=password, role="ADMIN")
+
+        db.session.add_all([u1, u2, u3, a1, a2])
         db.session.commit()
 
-        owner1 = models.RestaurantOwner(user_id = ro1.user_id)
-        owner2 = models.RestaurantOwner(user_id = ro2.user_id)
-        owner3 = models.RestaurantOwner(user_id = ro3.user_id)
-
-        db.session.add_all([owner1, owner2, owner3])
-        db.session.commit()
-
-        ad1 = models.Admin(user_id = a1.user_id)
-        ad2 = models.Admin(user_id = a2.user_id)
-
+        # Admin table
+        ad1 = models.Admin(user_id=a1.user_id)
+        ad2 = models.Admin(user_id=a2.user_id)
         db.session.add_all([ad1, ad2])
         db.session.commit()
 
-        res1 = models.Restaurant(restaurant_id = 1, name='Nha hang 1', res_owner_id = owner1.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res3_uezgk3.jpg", by_admin_id = a1.user_id,address='Vinh Long')
-        res2 = models.Restaurant(restaurant_id = 2, name='Nha hang 2', res_owner_id = owner2.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res2_gkskxx.jpg", by_admin_id = a2.user_id,address= 'Ho Chi Minh')
-        res3 = models.Restaurant(restaurant_id = 3, name='Nha hang 3', res_owner_id = owner3.user_id, status = 'PENDING', image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg", by_admin_id = a1.user_id,address = 'Da Lat')
-
-        db.session.add_all([res1, res2, res3])
+        c1 = models.Customer(user_id=u1.user_id)
+        c2 = models.Customer(user_id=u2.user_id)
+        c3 = models.Customer(user_id=u3.user_id)
+        db.session.add_all([c1, c2, c3])
         db.session.commit()
 
-        d1 = models.Dish(dish_id=1,res_id = res1.restaurant_id, name='Cơm tấm', is_available = True, price = 10000, note ="a", image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_afjhjb.jpg")
-        d2 = models.Dish(dish_id=2,res_id = res1.restaurant_id, name='Mì xào', is_available = True, price = 10000, note ="b", image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_3_qo5lms.jpg")
-        d3 = models.Dish(dish_id=3,res_id = res2.restaurant_id, name='cơm tấm', is_available = True, price = 10000, note ="c", image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_1_lfohho.jpg")
-        d4 = models.Dish(dish_id=4,res_id = res2.restaurant_id, name='mì xào', is_available = True, price = 10000, note ="d", image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_2_btt5x7.jpg")
-        d5 = models.Dish(dish_id=5,res_id = res3.restaurant_id, name='trà sữa', is_available = True, price = 5000, note ="e", image = "https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_4_uazlee.jpg")
+        # ========== RESTAURANT OWNERS + RESTAURANTS + CATEGORIES + DISHES ==========
+        import random
 
-        db.session.add_all([d1,d2,d3,d4,d5])
+        restaurant_names = [f"Nha hang {i}" for i in range(1, 51)]
+        dish_names = ["Cơm tấm", "Mì xào", "Trà sữa", "Phở bò", "Bánh mì", "Hủ tiếu", "Gà rán"]
+        category_names = ["Món chính", "Đồ uống", "Ăn vặt", "Tráng miệng", "Lẩu", "Cơm phần"]
+
+        owners_to_add = []
+        restaurants_to_add = []
+        categories_to_add = []
+        dishes_to_add = []
+
+        next_user_id = 6  # sau admin
+        next_restaurant_id = 1
+        next_category_id = 1
+        next_dish_id = 1
+
+        for res_name in restaurant_names:
+            # User (RestaurantOwner)
+            ro_user = models.User(
+                user_id=next_user_id,
+                name=f"ro{next_user_id}",
+                email=f"ro{next_user_id}@gmail.com",
+                password=password,
+                role="RESTAURANT_OWNER",
+            )
+            db.session.add(ro_user)
+            db.session.flush()  # để lấy user_id
+
+            ro = models.RestaurantOwner(user_id=ro_user.user_id)
+            owners_to_add.append(ro)
+
+            res = models.Restaurant(
+                restaurant_id=next_restaurant_id,
+                name=res_name,
+                res_owner_id=ro.user_id,
+                status="PENDING",
+                image="https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg",
+                by_admin_id=a1.user_id,
+                address=random.choice(["Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Da Lat", "Vinh Long"]),
+                rating_point=round(random.uniform(1.0, 5.0), 1),
+            )
+            restaurants_to_add.append(res)
+
+            # Mỗi nhà hàng có 2 category riêng
+            chosen_cats = random.sample(category_names, k=2)
+            res_categories = []
+            for cat_name in chosen_cats:
+                cat = models.Category(
+                    category_id=next_category_id,
+                    name=cat_name,
+                    res_id=next_restaurant_id
+                )
+                categories_to_add.append(cat)
+                res_categories.append(cat)
+                next_category_id += 1
+
+            # Mỗi category có 3 món ăn
+            for cat in res_categories:
+                for i in range(3):
+                    dish_name = random.choice(dish_names)
+                    dish = models.Dish(
+                        dish_id=next_dish_id,
+                        res_id=next_restaurant_id,
+                        category_id=cat.category_id,
+                        name=dish_name,
+                        is_available=True,
+                        price=random.randint(20000, 100000),
+                        note=f"Note {dish_name}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        image="https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870282/download_afjhjb.jpg",
+                    )
+                    dishes_to_add.append(dish)
+                    next_dish_id += 1
+
+            next_user_id += 1
+            next_restaurant_id += 1
+
+        # Lưu vào DB
+        db.session.add_all(owners_to_add)
+        db.session.add_all(restaurants_to_add)
+        db.session.add_all(categories_to_add)
+        db.session.add_all(dishes_to_add)
         db.session.commit()
 
     return app

@@ -1,0 +1,36 @@
+{% extends "layout/base.html" %}
+{% block title %}Chi tiết nhà hàng{% endblock %}
+
+{% block content %}
+<h1>Giỏ Hàng</h1>
+    {% if cart_items %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Món</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Tổng</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.dish.name }}</td>
+                    <td>{{ "{:,.0f}".format(item.dish.price) }} đ</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ "{:,.0f}".format(item.quantity * item.dish.price) }} đ</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="4" style="text-align:right;"><strong>Tổng cộng:</strong></td>
+                    <td><strong>{{ "{:,.0f}".format(total_price) }} đ</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    {% else %}
+        <p>Giỏ hàng của bạn đang trống.</p>
+    {% endif %}
+{% endblock %}

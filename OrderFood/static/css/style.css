@@ -4,3 +4,19 @@
 body{
     background-color: lightblue;
 }
+
+    .card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+}
+.transition-card {
+    transition: all 0.3s ease-in-out;
+  }
+  .transition-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+
