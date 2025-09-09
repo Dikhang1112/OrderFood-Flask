@@ -3,7 +3,9 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.13 (OrderFood-Flask)" />
   </component>
+
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (OrderFood-Flask)" project-jdk-type="Python SDK" />
+
   <component name="PyCharmProfessionalAdvertiser">
     <option name="shown" value="true" />
   </component>

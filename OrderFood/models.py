@@ -5,6 +5,7 @@ from sqlalchemy import Enum as SAEnum, String
 from sqlalchemy import UniqueConstraint
 
 from OrderFood import db
+from flask_login import UserMixin
 
 
 # =========================
@@ -51,7 +52,7 @@ class StatusRefund(Enum):
 # =========================
 # USER + ROLES
 # =========================
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = "user"
 
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -142,15 +143,32 @@ class Restaurant(db.Model):
 # =========================
 class Dish(db.Model):
     __tablename__ = "dish"
-
-    dish_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    res_id = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
-    name = db.Column(db.String(150), nullable=False)
+    dish_id      = db.Column(db.Integer, primary_key=True,autoincrement=True)
+    res_id       = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("category.category_id"), nullable=True)
+    name         = db.Column(db.String(150), nullable=False)
     is_available = db.Column(db.Boolean, default=True, nullable=False)
     price = db.Column(db.Float, nullable=False)
     note = db.Column(db.String(255))
     image = db.Column(db.String(255))  # lưu URL từ Cloudinary
     restaurant = db.relationship("Restaurant", backref=db.backref("dishes", cascade="all, delete-orphan"))
+
+# =========================
+# CATEGORY
+# =========================
+
+class Category(db.Model):
+    __tablename__ = "category"
+
+    category_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name        = db.Column(db.String(100), nullable=False)
+
+    # mỗi category chỉ thuộc về 1 restaurant
+    res_id      = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
+    restaurant  = db.relationship("Restaurant", backref=db.backref("categories", cascade="all, delete-orphan"))
+
+    # 1 category có nhiều dish
+    dishes      = db.relationship("Dish", backref="category", cascade="all, delete-orphan")
 
 
 # =========================

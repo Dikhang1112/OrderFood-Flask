@@ -34,6 +34,10 @@ def _norm_role(role: str) -> str:
 def get_user_by_email(email: str):
     return User.query.filter(User.email == email).first()
 
+def get_user_by_id(user_id):
+    return User.query.get(user_id)
+
+
 def create_user(name, email, phone, hashed_password, role: str):
     u = User(name=name, email=email, phone=phone, password=hashed_password, role=role)
     db.session.add(u)
@@ -60,15 +64,38 @@ def get_restaurants_by_name(name: str = None):
     if not name:
         return []
     name = name.strip()
-    return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%")).all()
-    # return Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%"))
+    restaurants = Restaurant.query.filter(func.lower(Restaurant.name).like(f"%{name.lower()}%")).all()
 
-
+    for r in restaurants:
+        r.stars = get_star_display(r.rating_point or 0)
+    return restaurants
 
 
 def get_restaurants_by_dishes_name(dishes_name: str = None):
+    if not dishes_name:
+        return []
     dishes = Dish.query.options(joinedload(Dish.restaurant)).filter(
-        func.lower(Dish.name).like(f"%{dishes_name.lower()}%")).all()
+        func.lower(Dish.name).like(f"%{dishes_name.strip().lower()}%")
+    ).all()
+
     restaurants = list({dish.restaurant.restaurant_id: dish.restaurant for dish in dishes if dish.restaurant}.values())
+
+    # Gắn thêm sao cho mỗi nhà hàng
+    for r in restaurants:
+        r.stars = get_star_display(r.rating_point or 0)
     return restaurants
+
+def get_all_restaurants_ordered_by_rating(descending=True):
+    if descending:
+        return Restaurant.query.order_by(Restaurant.rating.desc()).all()
+    return Restaurant.query.order_by(Restaurant.rating.asc()).all()
+
+
+def get_star_display(rating: float):
+    if not rating:
+        rating = 0
+    full = int(rating)
+    half = 1 if rating - full >= 0.5 else 0
+    empty = 5 - full - half
+    return {"full": full, "half": half, "empty": empty}
 

@@ -1,29 +1,25 @@
 <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="{{ url_for('index') }}">OrderFood</a>
-
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="mynavbar">
       <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a>
-        </li>
-        {% if session.get('role') == 'customer' %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('customer_home') }}">Khu khách hàng</a></li>
+        {% if session.get('role') == 'CUSTOMER' %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a></li>
         {% elif session.get('role') == 'restaurant_owner' %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('owner_home') }}">Khu chủ quán</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('owner_home') }}">Trang chủ</a></li>
         {% elif session.get('role') == 'admin' %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_home') }}">Admin</a></li>
         {% endif %}
       </ul>
 
-      <form class="d-flex me-2" action="/">
-        <input class="form-control me-2" type="text" placeholder="Search" name="search">
-        <button class="btn btn-primary" type="submit">Search</button>
-      </form>
+<!--      <form class="d-flex me-2" action="/">-->
+<!--        <input class="form-control me-2" type="text" placeholder="Search" name="search">-->
+<!--        <button class="btn btn-primary" type="submit">Search</button>-->
+<!--      </form>-->
 
       <div class="d-flex">
         {% if not session.get('user_id') %}

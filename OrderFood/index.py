@@ -1,12 +1,14 @@
 from secrets import token_urlsafe
 
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from OrderFood import app, dao_index, oauth
 from OrderFood.dao_index import *
-from OrderFood.models import Restaurant
+from OrderFood.models import Restaurant, Category, Customer, Cart, CartItem
 from admin_service import is_admin
+
+from flask_login import login_user, logout_user, current_user, login_required
 
 ENUM_UPPERCASE = True  # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
@@ -37,6 +39,8 @@ def is_owner(role: str) -> bool:
 
 @app.route("/")
 def index():
+    restaurants = Restaurant.query.limit(50).all()
+    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
     keyword = (request.args.get('search') or '').strip()
     if not keyword:
         return render_template("customer_home.html", restaurants=[])
@@ -45,7 +49,52 @@ def index():
     all_restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
     print(all_restaurants)
     return render_template("customer_home.html", restaurants=all_restaurants)
+    rating_filter = request.args.get('rating')
+    location_filter = request.args.get('location')
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
 
+    # không tìm kiếm thì trả về 50 nhà hàng đầu tiên
+    if not keyword:
+        restaurants = Restaurant.query.limit(50).all()
+    else:
+        restaurants_by_name = dao_index.get_restaurants_by_name(keyword)
+        restaurants_by_dishes = dao_index.get_restaurants_by_dishes_name(keyword)
+        restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
+
+        # Lọc theo rating nếu có
+    if rating_filter and rating_filter.isdigit():
+        rating_value = int(rating_filter)
+        restaurants = [r for r in restaurants if (r.rating_point or 0) >= rating_value]
+
+    locations = (
+        db.session.query(Restaurant.address)
+        .filter(Restaurant.address.isnot(None))
+        .distinct()
+        .all()
+    )
+    locations = [loc[0] for loc in locations]
+    if location_filter:
+        restaurants = [r for r in restaurants if r.address and location_filter in r.address]
+
+    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
+
+    total = len(restaurants)
+    start = (page - 1) * per_page
+    end = start + per_page
+    restaurants_page = restaurants[start:end]
+    restaurants_with_stars =[]
+    for r in restaurants_page:
+        restaurants_with_stars.append({
+            "restaurant": r,
+            "stars": dao_index.get_star_display(r.rating_point or 0)
+        })
+
+    return render_template("customer_home.html", restaurants=restaurants_with_stars,
+                           locations = locations,
+                           page=page,
+                           per_page= per_page,
+                           total = total)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -104,7 +153,7 @@ def login():
             return redirect(url_for("owner_home"))
         if is_admin(user.role):
             return redirect(url_for("admin.admin_home"))
-        return redirect(url_for("customer_home"))
+        return redirect(url_for("index"))
 
     return render_template("auth.html")
 
@@ -115,20 +164,50 @@ def logout():
     flash("Đã đăng xuất", "info")
     return redirect(url_for("index"))
 
-
-@app.route("/customer")
+app.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
+
+    # Lấy 50 nhà hàng, sắp xếp theo rating giảm dần
     restaurants = Restaurant.query.limit(50).all()
-    return render_template("customer_home.html", restaurants=restaurants)
+    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
+
+    # Gắn thêm hiển thị sao
+    restaurants_with_stars = []
+    for r in restaurants:
+        restaurants_with_stars.append({
+            "restaurant": r,
+            "stars": dao_index.get_star_display(r.rating_point or 0)
+        })
+
+    return render_template("customer_home.html", restaurants=restaurants_with_stars)
 
 
 @app.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
     res = dao_index.get_restaurant_by_id(restaurant_id)
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
-    return render_template("/customer/restaurant_detail.html", res=res, dishes=dishes)
+
+    # Bổ sung: hiển thị sao, categories, giỏ hàng
+    stars = dao_index.get_star_display(res.rating_point or 0)
+    categories = Category.query.filter_by(res_id=restaurant_id).all()
+
+    cart_items_count = 0
+    user_id = session.get("user_id")
+    if user_id:
+        cart = Cart.query.filter_by(cus_id=user_id, res_id=res.restaurant_id).first()
+        if cart:
+            cart_items_count = sum(item.quantity for item in cart.items)
+
+    return render_template(
+        "/customer/restaurant_detail.html",
+        res=res,
+        dishes=dishes,
+        stars=stars,
+        categories=categories,
+        cart_items_count=cart_items_count
+    )
 
 
 @app.route("/owner")
@@ -202,6 +281,66 @@ def google_callback():
     flash("Đăng nhập bằng Google thành công!", "success")
     return redirect(url_for("customer_home"))
 
+@app.route('/api/cart', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    dish_id = data.get("dish_id")
+    restaurant_id = data.get("restaurant_id")
+    if not dish_id or not restaurant_id:
+        return jsonify({"error": "Thiếu dữ liệu"}), 400
+
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    customer = Customer.query.filter_by(user_id=user_id).first()
+    if not customer:
+        return jsonify({"error": "Bạn không phải là khách hàng"}), 403
+
+    # Tìm giỏ hàng đang mở
+    cart = Cart.query.filter_by(
+        cus_id=user_id, res_id=restaurant_id, is_open=True
+    ).first()
+
+    if not cart:
+        cart = Cart(cus_id=user_id, res_id=restaurant_id, is_open=True)
+        db.session.add(cart)
+        db.session.commit()
+
+    # Thêm hoặc tăng số lượng món
+    cart_item = CartItem.query.filter_by(cart_id=cart.cart_id, dish_id=dish_id).first()
+    if cart_item:
+        cart_item.quantity += 1
+    else:
+        cart_item = CartItem(cart_id=cart.cart_id, dish_id=dish_id, quantity=1)
+        db.session.add(cart_item)
+
+    db.session.commit()
+
+    # Đếm tổng số sản phẩm trong giỏ
+    total_items = sum(item.quantity for item in cart.items)
+    return jsonify({"total_items": total_items})
+
+
+@app.route("/cart/<int:restaurant_id>")
+def cart(restaurant_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    customer = Customer.query.filter_by(user_id=user_id).first()
+    if not customer:
+        return jsonify({"error": "Bạn không phải là khách hàng"}), 403
+    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id = restaurant_id).first()
+
+    cart_items = []
+    total_price = 0
+
+    if cart:
+        cart_items = cart.items
+        total_price = sum(item.quantity * item.dish.price for item in cart_items)
+
+    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
