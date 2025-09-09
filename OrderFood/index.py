@@ -39,62 +39,56 @@ def is_owner(role: str) -> bool:
 
 @app.route("/")
 def index():
-    restaurants = Restaurant.query.limit(50).all()
-    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
-    keyword = (request.args.get('search') or '').strip()
-    if not keyword:
-        return render_template("customer_home.html", restaurants=[])
-    restaurants_by_name = dao_index.get_restaurants_by_name(keyword)
-    restaurants_by_dishes = dao_index.get_restaurants_by_dishes_name(keyword)
-    all_restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
-    print(all_restaurants)
-    return render_template("customer_home.html", restaurants=all_restaurants)
-    rating_filter = request.args.get('rating')
-    location_filter = request.args.get('location')
+    # Params
+    keyword = (request.args.get("search") or "").strip()
+    rating_filter = request.args.get("rating")
+    location_filter = request.args.get("location")
     page = request.args.get("page", 1, type=int)
     per_page = 20
 
-    # không tìm kiếm thì trả về 50 nhà hàng đầu tiên
+    # Lấy danh sách ban đầu
     if not keyword:
-        restaurants = Restaurant.query.limit(50).all()
+        restaurants = Restaurant.query.limit(50).all()   # mặc định hiển thị 50
     else:
-        restaurants_by_name = dao_index.get_restaurants_by_name(keyword)
-        restaurants_by_dishes = dao_index.get_restaurants_by_dishes_name(keyword)
-        restaurants = list({r.restaurant_id: r for r in restaurants_by_name + restaurants_by_dishes}.values())
+        by_name = dao_index.get_restaurants_by_name(keyword)               # list[Restaurant]
+        by_dish = dao_index.get_restaurants_by_dishes_name(keyword)        # list[Restaurant]
+        # Hợp nhất theo restaurant_id để không trùng
+        restaurants = list({r.restaurant_id: r for r in (by_name + by_dish)}.values())
 
-        # Lọc theo rating nếu có
+    # Lọc rating (nếu có)
     if rating_filter and rating_filter.isdigit():
-        rating_value = int(rating_filter)
-        restaurants = [r for r in restaurants if (r.rating_point or 0) >= rating_value]
+        min_rating = int(rating_filter)
+        restaurants = [r for r in restaurants if (r.rating_point or 0) >= min_rating]
 
-    locations = (
-        db.session.query(Restaurant.address)
-        .filter(Restaurant.address.isnot(None))
-        .distinct()
-        .all()
-    )
-    locations = [loc[0] for loc in locations]
+    # Lọc địa điểm (nếu có)
     if location_filter:
         restaurants = [r for r in restaurants if r.address and location_filter in r.address]
 
-    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
+    # Danh sách địa điểm để render dropdown
+    locations = [row[0] for row in Restaurant.query.with_entities(Restaurant.address)
+                 .filter(Restaurant.address.isnot(None)).distinct().all()]
 
+    # Sắp xếp & phân trang
+    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
     total = len(restaurants)
     start = (page - 1) * per_page
     end = start + per_page
     restaurants_page = restaurants[start:end]
-    restaurants_with_stars =[]
-    for r in restaurants_page:
-        restaurants_with_stars.append({
-            "restaurant": r,
-            "stars": dao_index.get_star_display(r.rating_point or 0)
-        })
 
-    return render_template("customer_home.html", restaurants=restaurants_with_stars,
-                           locations = locations,
-                           page=page,
-                           per_page= per_page,
-                           total = total)
+    # Gắn hiển thị sao (để template có thể vẽ rating)
+    restaurants_with_stars = [
+        {"restaurant": r, "stars": dao_index.get_star_display(r.rating_point or 0)}
+        for r in restaurants_page
+    ]
+
+    return render_template(
+        "customer_home.html",
+        restaurants=restaurants_with_stars,
+        locations=locations,
+        page=page,
+        per_page=per_page,
+        total=total,
+    )
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -164,7 +158,7 @@ def logout():
     flash("Đã đăng xuất", "info")
     return redirect(url_for("index"))
 
-app.route("/customer")
+@app.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
