@@ -39,49 +39,74 @@
 
 <div class="container mt-4">
     {% if res %}
-        <div class="text-center mb-4">
-            <h3>{{ res.name }}</h3>
-            <p><strong>Địa chỉ:</strong> {{ res.address }}</p>
-        </div>
-        <hr>
-        <h4 class="mb-3">Thực đơn</h4>
+    <h3 class="text-center mb-4">{{ res.name }}</h3>
+    <hr>
+    <h4 class="mb-3">Thực đơn</h4>
 
-        {% if dishes %}
-            <div class="d-flex flex-column align-items-center">
-                {% for dish in dishes %}
-                    <div class="card mb-3 w-75">
-                        <div class="row g-0 align-items-center">
-                            <!-- Hình ảnh món ăn bên trái -->
-                            <div class="col-md-3">
-                                {% if dish.image %}
-                                <img src="{{ dish.image }}" class="img-fluid rounded-start" alt="{{ dish.name }}" style="height:120px; object-fit:cover;">
-                                {% else %}
-                                <img src="https://via.placeholder.com/120x120?text=No+Image" class="img-fluid rounded-start" alt="No Image">
-                                {% endif %}
-                            </div>
-                            <!-- Tên và note ở giữa -->
-                            <div class="col-md-6">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ dish.name }}</h5>
-                                    <p class="card-text">{{ dish.note }}</p>
-                                </div>
-                            </div>
-                            <!-- Giá và nút thêm vào giỏ bên phải -->
-                            <div class="col-md-3 text-center">
-                                <div class="card-body">
-                                    <p class="fw-bold">{{ dish.price }} đ</p>
-                                    <a href="/cart/add/{{ dish.dish_id }}" class="btn btn-success btn-sm">Thêm vào giỏ</a>
-                                </div>
-                            </div>
-                        </div>
+    {% if dishes %}
+    <div class="d-flex flex-column align-items-center">
+        {% for dish in dishes %}
+        <div class="card mb-3 w-75">
+            <div class="row g-0 align-items-center">
+                <!-- Hình ảnh món ăn bên trái -->
+                <div class="col-md-3">
+                    {% if dish.image %}
+                    <img src="{{ dish.image }}" class="img-fluid rounded-start" alt="{{ dish.name }}"
+                         style="height:120px; object-fit:cover;">
+                    {% else %}
+                    <img src="https://via.placeholder.com/120x120?text=No+Image" class="img-fluid rounded-start"
+                         alt="No Image">
+                    {% endif %}
+                </div>
+                <!-- Tên và note ở giữa -->
+                <div class="col-md-6">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ dish.name }}</h5>
+                        <p class="card-text">{{ dish.note }}</p>
                     </div>
-                {% endfor %}
+                </div>
+                <!-- Giá và nút thêm vào giỏ bên phải -->
+                <div class="col-md-3 text-center">
+                    <div class="card-body">
+                        <p class="fw-bold">{{ dish.price }} đ</p>
+                        <a href="/cart/add/{{ dish.dish_id }}" class="btn btn-success btn-sm">Thêm vào giỏ</a>
+                    </div>
+                </div>
             </div>
-        {% else %}
-            <p class="text-center">Nhà hàng này chưa có món ăn nào.</p>
-        {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center mb-4">
+    <p>
+        <strong>Địa chỉ:</strong> {{ res.address }}
+        <!-- Thêm chữ + icon Google Maps -->
+        <span style="margin-left:12px;">
+            Nhấn vào biểu tượng để đến quán
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ res.address | urlencode }}&travelmode=driving"
+               target="_blank" rel="noopener"
+               style="display:inline-block; margin-left:4px;">
+                <img src="{{ url_for('static', filename='img/google-maps.jpg') }}"
+                     alt="Xem trên Google Maps"
+                     style="width:28px;height:28px;vertical-align:middle;">
+            </a>
+        </span>
+    </p>
+</div>
+
+    <!-- Thêm bản đồ nhỏ nhúng để test -->
+    <div class="text-center mb-4">
+       
+        <iframe
+                src="https://maps.google.com/maps?q={{ res.address | urlencode }}&z=15&output=embed"
+                width="30%" height="250"
+                style="border:0;border-radius:12px;" allowfullscreen loading="lazy">
+        </iframe>
+    </div>
     {% else %}
-        <p class="text-center">Không có nhà hàng thỏa yêu cầu</p>
+    <p class="text-center">Nhà hàng này chưa có món ăn nào.</p>
+    {% endif %}
+    {% else %}
+    <p class="text-center">Không có nhà hàng thỏa yêu cầu</p>
     {% endif %}
 </div>
 {%endblock%}
