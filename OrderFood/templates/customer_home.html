@@ -1,63 +1,55 @@
 {% extends "layout/base.html" %}
 {% block title %}Khu Khách Hàng{% endblock %}
 
+{# Thêm CSS riêng cho trang + animation #}
 {% block content %}
-<div class="mt-4 p-5 bg-light border rounded">
-    <h2>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/customer_home.css') }}"/>
+
+<div class="hero-welcome fade-in-up mt-4 p-5 border rounded">
+    <h2 class="mb-2">
         Xin chào,
         {{ session.get('user_name')
         or (session.get('user_email') and session.get('user_email').split('@')[0])
         or 'bạn' }}
+        <span class="wave">👋</span>
     </h2>
-    <p>Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
-    <p>Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
-</div>
-
-
-<div class="container mt-4">
-    <h3>Danh sách 50 nhà hàng</h3>
-    {% if restaurants %}
-    <div class="row">
-        {% for res in restaurants %}
-        <div class="col-md-4 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ res.name }}</h5>
-                    <p class="card-text">{{ res.address }}</p>
-                    <a href="/restaurant/{{res.restaurant_id}}" class="btn btn-primary">Xem chi tiết</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p>Chưa có nhà hàng nào trong hệ thống.</p>
-    {% endif %}
+    <p class="mb-1">Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
+    <p class="text-muted mb-0">Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
 </div>
 
 <div class="container mt-4">
-  <h3>Danh sách 50 nhà hàng</h3>
+  <div class="title-row d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
+    <h3 class="m-0">Danh sách 50 nhà hàng</h3>
+    <div class="title-underline"></div>
+  </div>
+
   {% if restaurants %}
-    <div class="row">
+    <div class="row g-3">
       {% for res in restaurants %}
-        <div class="col-md-4 mb-3">
-         <div class="card h-100">
+        <div class="col-md-4">
+          <div class="card restaurant-card h-100 shadow-sm hover-lift">
             {% if res.image %}
-            <img src="{{ res.image }}" class="card-img-top" alt="{{ res.name }}" style="height: 200px; object-fit: cover;">
+              <div class="img-wrap">
+                <img src="{{ res.image }}" class="card-img-top" alt="{{ res.name }}">
+              </div>
             {% else %}
-            <img src="https://via.placeholder.com/400x200?text=No+Image" class="card-img-top" alt="No image">
+              <div class="img-wrap">
+                <img src="https://via.placeholder.com/800x400?text=No+Image" class="card-img-top" alt="No image">
+              </div>
             {% endif %}
-            <div class="card-body">
-              <h5 class="card-title mt-2">{{ res.name }}</h5>
-              <p class="card-text">{{ res.address }}</p>
-              <a href="/restaurant/{{ res.restaurant_id }}" class="btn btn-primary">Xem chi tiết</a>
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title mt-1 mb-2 text-truncate" title="{{ res.name }}">{{ res.name }}</h5>
+              <p class="card-text text-muted small flex-grow-1 two-lines" title="{{ res.address }}">{{ res.address }}</p>
+              <div class="mt-2 d-flex justify-content-center">
+                <a href="/restaurant/{{ res.restaurant_id }}" class="btn btn-primary btn-detail pulse-on-hover">Xem chi tiết</a>
+              </div>
             </div>
           </div>
         </div>
       {% endfor %}
     </div>
   {% else %}
-    <p>Chưa có nhà hàng nào trong hệ thống.</p>
+    <p class="text-muted">Chưa có nhà hàng nào trong hệ thống.</p>
   {% endif %}
 </div>
 {% endblock %}

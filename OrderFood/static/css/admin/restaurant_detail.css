@@ -1,0 +1,122 @@
+:root{
+  --bd: rgba(0,0,0,.08);
+  --muted:#64748b;
+  --ok:#16a34a; --warn:#f59e0b; --err:#ef4444;
+}
+
+.rd-wrap{
+  display:grid;
+  grid-template-columns: 360px 1fr;      /* ảnh | nội dung */
+  gap: 24px;
+  background:#fff;
+  border:1px solid var(--bd);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 10px 30px rgba(2,8,20,.06);
+}
+
+.rd-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:18px;
+}
+.rd-title{
+  display:flex; align-items:center; gap:12px;
+  font-size:26px; font-weight:800; color:#0f172a;
+}
+.rd-id{ color:var(--muted); font-size:14px; font-weight:600; }
+
+.rd-badge{
+  display:inline-block; padding:12px 12px; border-radius:999px;
+  font-size:15px; font-weight:700; color:#fff;
+}
+.rd-badge.approved{ background:var(--ok); }
+.rd-badge.pending{  background:var(--warn); }
+.rd-badge.rejected{ background:var(--err); }
+
+.rd-img{
+  width:100%; height:260px; object-fit:cover;
+  border-radius:14px; border:1px solid var(--bd);
+  box-shadow:0 12px 24px rgba(0,0,0,.12);
+}
+
+.rd-meta{
+  display:grid; gap:12px;
+  color:#0f172a;
+}
+.rd-item{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:6px 10px;        /* giảm padding */
+  min-height:30px;         /* chiều cao nhỏ gọn hơn */
+  border:1px dashed var(--bd);
+  border-radius:12px;
+  background:#fafafa;
+}
+.rd-icon{
+  width:22px; height:22px; flex:0 0 22px;
+  display:inline-grid; place-items:center; color:#0f172a;
+}
+.rd-label{ font-weight:700; }
+.rd-value{ color:#111827; }
+
+.rd-actions{
+  margin-top:16px;
+  display:flex;
+  justify-content:center;  /* căn giữa */
+  align-items:center;
+  gap:16px;
+            /* khoảng cách giữa nút và badge */
+}.btn-back{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:10px; border:1px solid var(--bd);
+  background:#111827; color:#fff; text-decoration:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.12);
+  transition:transform .08s ease, opacity .15s ease;
+}
+.btn-back:hover{ transform:translateY(-1px); opacity:.95; }
+
+/* responsive */
+@media (max-width: 992px){
+  .rd-wrap{ grid-template-columns: 1fr; }
+  .rd-img{ height:220px; }
+}
+.rd-imgs{
+  display: grid;
+  gap: 16px;
+}
+.rd-img-block{
+  display:flex;
+  flex-direction: column;
+  gap:6px;
+}
+.rd-img-block .rd-label{
+  font-weight:700;
+  font-size:14px;
+  color:#0f172a;
+}
+.rd-img-block .rd-img{
+  width:100%;
+  height:260px;
+  object-fit:cover;
+  border-radius:14px;
+  border:1px solid var(--bd);
+  box-shadow:0 12px 24px rgba(0,0,0,.12);
+}
+/* Rating stars */
+.rd-rating{ display:flex; align-items:center; gap:8px; }
+.stars{ position:relative; display:inline-block; line-height:1; }
+.stars-bg, .stars-fg{
+  font-size:20px;
+  letter-spacing:2px;              /* giãn cách giữa các sao cho đẹp */
+  font-weight:900;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+}
+.stars-bg{ color:#d1d5db; }        /* xám nhạt */
+.stars-fg{
+  color:#f59e0b;                   /* vàng */
+  position:absolute; inset:0 auto 0 0;
+  overflow:hidden; white-space:nowrap;
+  width:0;                         /* sẽ set inline bằng style="width: xx%" */
+}
+.rd-score{ color:#0f172a; font-weight:700; }

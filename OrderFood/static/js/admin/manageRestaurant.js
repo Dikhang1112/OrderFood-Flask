@@ -1,25 +1,24 @@
 (function () {
-  // helper: tìm <tr> chứa button
+  // Helper: Tìm <tr> chứa button
   function findRow(el) {
     return el.closest(".rs-row") || el.closest("tr");
   }
 
-  // helper: cập nhật badge trạng thái trong hàng
+  // Helper: Cập nhật badge trạng thái trong hàng
   function setStatusBadge(row, statusText) {
     const cell = row.querySelector(".rs-col--status") || row.querySelector("td:nth-child(4)");
     if (!cell) return;
-
     const map = {
       APPROVED: ["rs-badge rs-badge--ok", "APPROVED"],
       PENDING:  ["rs-badge rs-badge--warn", "PENDING"],
-      REJECTED: ["rs-badge rs-badge--err", "REJECTED"]
+      REJECTED: ["rs-badge rs-badge--err", "REJECTED"],
+      REJECT:   ["rs-badge rs-badge--err", "REJECT"]
     };
     const [cls, label] = map[statusText] || ["rs-badge", statusText];
-
     cell.innerHTML = `<span class="${cls}">${label}</span>`;
   }
 
-  // helper: bật/tắt loading cho button
+  // Helper: Bật/tắt loading
   function setLoading(btn, isLoading) {
     if (!btn) return;
     btn.disabled = isLoading;
@@ -28,13 +27,12 @@
     btn.style.opacity = isLoading ? "0.6" : "1";
   }
 
-  async function callPatch(url) {
+  // Gọi API PATCH (hỗ trợ gửi body JSON)
+  async function callPatch(url, payload) {
     const res = await fetch(url, {
       method: "PATCH",
-      headers: {
-        "Accept": "application/json"
-        // Nếu bạn dùng CSRF, thêm header X-CSRFToken ở đây
-      }
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: payload ? JSON.stringify(payload) : null
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => "");
@@ -43,51 +41,65 @@
     return res.json().catch(() => ({}));
   }
 
-  // Click handler cho toàn trang
+  // Lắng nghe click toàn trang (event delegation)
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest(".rs-action");
     if (!btn) return;
 
     const id = btn.getAttribute("data-id");
     if (!id) return;
-
-    // Tìm dòng để cập nhật UI
     const row = findRow(btn);
 
-   // REJECT
-if (btn.classList.contains("rs-action--reject")) {
-  // Thay confirm() bằng Toast.warning có nút xác nhận
-  if (window.Toast && Toast.warningConfirm) {
-    Toast.warningConfirm("Bạn có chắc muốn từ chối nhà hàng này?", async () => {
-      try {
-        setLoading(btn, true);
-        const data = await callPatch(`/admin/restaurants/${id}/reject`);
-        setStatusBadge(row, (data && data.status) || "REJECTED");
-        Toast.success("Đã từ chối nhà hàng");
-      } catch (err) {
-        console.error(err);
-        Toast.error("Không thể reject. Vui lòng thử lại.");
-      } finally {
-        setLoading(btn, false);
-      }
-    });
-  } else {
-    // fallback: confirm() như cũ
-    const confirmReject = confirm("Từ chối nhà hàng này?");
-    if (!confirmReject) return;
     try {
-      setLoading(btn, true);
-      const data = await callPatch(`/admin/restaurants/${id}/reject`);
-      setStatusBadge(row, (data && data.status) || "REJECTED");
-      if (window.Toast) Toast.success("Đã từ chối nhà hàng");
+      // REJECT: Confirm → Prompt lý do → PATCH
+      if (btn.classList.contains("rs-action--reject")) {
+        if (window.Toast && Toast.warningConfirm && Toast.warningPrompt) {
+          // B1: Xác nhận
+          Toast.warningConfirm("Bạn có chắc muốn từ chối nhà hàng này?", () => {
+            // B2: Nhập lý do
+            Toast.warningPrompt("Lí do", "Nhập lý do từ chối...", async (reason) => {
+              try {
+                setLoading(btn, true);
+                const data = await callPatch(`/admin/restaurants/${id}/reject`, { reason });
+                setStatusBadge(row, (data && data.status) || "REJECTED");
+                Toast.success("Đã từ chối nhà hàng");
+              } catch (err) {
+                console.error(err);
+                Toast.error("Không thể reject. Vui lòng thử lại.");
+              } finally {
+                setLoading(btn, false);
+              }
+            });
+          });
+        } else {
+          // Fallback: confirm + prompt mặc định
+          if (!confirm("Bạn có chắc muốn từ chối?")) return;
+          const reason = prompt("Lí do từ chối:");
+          if (reason == null || !reason.trim()) return;
+          setLoading(btn, true);
+          const data = await callPatch(`/admin/restaurants/${id}/reject`, { reason: reason.trim() });
+          setStatusBadge(row, (data && data.status) || "REJECTED");
+          if (window.Toast) Toast.success("Đã từ chối nhà hàng");
+          setLoading(btn, false);
+        }
+        return;
+      }
+
+      // APPROVE (nếu đã có API)
+      if (btn.classList.contains("rs-action--approve")) {
+        setLoading(btn, true);
+        const data = await callPatch(`/admin/restaurants/${id}/approve`);
+        setStatusBadge(row, (data && data.status) || "APPROVED");
+        if (window.Toast) Toast.success("Duyệt nhà hàng thành công");
+        return;
+      }
     } catch (err) {
       console.error(err);
-      if (window.Toast) Toast.error("Không thể reject. Vui lòng thử lại.");
+      if (window.Toast) {
+        Toast.error(err.message.includes("User cancelled") ? "Đã hủy thao tác" : "Không thể thực hiện. Vui lòng thử lại.");
+      }
     } finally {
       setLoading(btn, false);
     }
-  }
-  return;
-}
   });
 })();
