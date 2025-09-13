@@ -1,8 +1,8 @@
-
+import traceback
 from secrets import token_urlsafe
 
 import login
-from flask import  render_template, request, redirect, url_for, flash, session, jsonify
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from sqlalchemy.sql.functions import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from OrderFood import app, dao_index, oauth
@@ -12,9 +12,12 @@ from adminService import is_admin
 from flask_login import login_user, logout_user, current_user, login_required
 import cloudinary.uploader
 
+ENUM_UPPERCASE = True  # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
+import logging
 
-ENUM_UPPERCASE = True   # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
+# cấu hình log
+logging.basicConfig(level=logging.DEBUG)
 
 def norm_role_for_db(role: str) -> str:
     role = (role or "customer").strip().lower()
@@ -22,19 +25,23 @@ def norm_role_for_db(role: str) -> str:
         return "CUSTOMER" if role == "customer" else "RESTAURANT_OWNER"
     return role  # dùng chữ thường
 
+
 def _role_to_str(r):
     # nếu r là Enum => lấy .value, còn lại giữ nguyên
     return getattr(r, "value", r)
+
 
 def is_customer(role: str) -> bool:
     # return role in ("customer", "CUSTOMER")
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
 
+
 def is_owner(role: str) -> bool:
     # return role in ("restaurant_owner", "RESTAURANT_OWNER")
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "restaurant_owner"
+
 
 @app.route("/")
 def index():
@@ -76,7 +83,7 @@ def index():
     start = (page - 1) * per_page
     end = start + per_page
     restaurants_page = restaurants[start:end]
-    restaurants_with_stars =[]
+    restaurants_with_stars = []
     for r in restaurants_page:
         restaurants_with_stars.append({
             "restaurant": r,
@@ -84,18 +91,19 @@ def index():
         })
 
     return render_template("customer_home.html", restaurants=restaurants_with_stars,
-                           locations = locations,
+                           locations=locations,
                            page=page,
-                           per_page= per_page,
-                           total = total)
+                           per_page=per_page,
+                           total=total)
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        name  = request.form.get("name", "").strip()
+        name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         phone = request.form.get("phone", "").strip()
-        role  = norm_role_for_db(request.form.get("role", "customer"))
+        role = norm_role_for_db(request.form.get("role", "customer"))
         password = request.form.get("password", "")
 
         if not email or not password:
@@ -114,16 +122,17 @@ def register():
         user = get_user_by_email(email)
 
         # ---- AUTO LOGIN ----
-        session["user_id"]    = user.user_id
+        session["user_id"] = user.user_id
         session["user_email"] = user.email
         session["user_name"] = user.name
-        role_val = getattr(user.role, "value", user.role)   # Enum hoặc str
+        role_val = getattr(user.role, "value", user.role)  # Enum hoặc str
         session["role"] = (role_val or "").lower()
 
         flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
         return redirect(url_for("index"))
 
     return render_template("auth.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -149,11 +158,13 @@ def login():
 
     return render_template("auth.html")
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     flash("Đã đăng xuất", "info")
     return redirect(url_for("index"))
+
 
 # @app.route("/customer")
 # def customer_home():
@@ -172,21 +183,20 @@ def logout():
 
 @app.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
-
     res = dao_index.get_restaurant_by_id(restaurant_id)
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     stars = dao_index.get_star_display(res.rating_point or 0)
     categories = Category.query.filter_by(res_id=restaurant_id).all()
     user_id = session.get("user_id")
-    cart = Cart.query.filter_by(cus_id=user_id, res_id =res.restaurant_id).first()
+    cart = Cart.query.filter_by(cus_id=user_id, res_id=res.restaurant_id).first()
     cart_items_count = 0;
     if cart:  # chỉ khi cart tồn tại
         cart_items_count = sum(item.quantity for item in cart.items)
         # cart_items_count = len(CartItem.query.filter_by( cart_id=cart.cart_id).all())
     return render_template("/customer/restaurant_detail.html", res=res,
-                           dishes = dishes, stars = stars,
-                           categories = categories,
-                           cart_items_count = cart_items_count)
+                           dishes=dishes, stars=stars,
+                           categories=categories,
+                           cart_items_count=cart_items_count)
 
 
 @app.route("/owner")
@@ -194,6 +204,7 @@ def owner_home():
     if not is_owner(session.get("role")):
         return redirect(url_for("login"))
     return render_template("owner_home.html")
+
 
 # chỉnh sửa thực đơn của owner
 @app.route("/owner/menu")
@@ -211,13 +222,11 @@ def get_menu():
     categories = get_categories_by_owner_id(user_id)
     return render_template("owner/menu.html", dishes=dishes, categories=categories)
 
-
     return render_template("customer_home.html", restaurants=restaurants_with_stars,
-                           locations = locations,
+                           locations=locations,
                            page=page,
-                           per_page= per_page,
-                           total = total)
-
+                           per_page=per_page,
+                           total=total)
 
 
 @app.route("/owner/add_dish", methods=["POST"])
@@ -285,6 +294,80 @@ def add_dish():
         "active": new_dish.is_available
     }})
 
+
+@app.route("/owner/menu/<int:dish_id>", methods=["POST"])
+def edit_dish(dish_id):
+    try:
+        dish = Dish.query.get(dish_id)
+        if not dish:
+            return jsonify({"success": False, "error": "Món ăn không tồn tại"}), 404
+
+        name = request.form.get('name')
+        note = request.form.get('note')
+        price = request.form.get('price')
+        category_name = request.form.get('category')
+        is_available = request.form.get("is_available") == "1"
+        image_url = request.form.get('image_url')
+
+        dish.name = name
+        dish.note = note
+        dish.is_available = is_available
+        try:
+            dish.price = float(price) if price else 0.0
+        except ValueError:
+            return jsonify({"success": False, "error": f"Giá trị price không hợp lệ: {price}"}), 400
+
+        if category_name:
+            category = Category.query.filter_by(name=category_name).first()
+            if not category:
+                category = Category(name=category_name)
+                db.session.add(category)
+                db.session.flush()
+            dish.category_id = category.category_id
+
+        if image_url:
+            dish.image = image_url
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "dish": {
+                "dish_id": dish.dish_id,
+                "name": dish.name,
+                "note": dish.note,
+                "price": dish.price,
+                "category": dish.category.name if dish.category else None,
+                "image": dish.image,
+                "is_available": dish.is_available
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print("Lỗi:", e)
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    # index.py
+
+
+@app.route("/owner/menu/<int:dish_id>", methods=["DELETE"])
+def delete_dish(dish_id):
+    try:
+        dish = Dish.query.get(dish_id)
+        if not dish:
+            return jsonify({"success": False, "error": "Món ăn không tồn tại"}), 404
+
+        db.session.delete(dish)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": f"Đã xoá món ăn {dish.name}"})
+    except Exception as e:
+        db.session.rollback()
+        print("Lỗi:", e)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # ================= GOOGLE LOGIN =================
 
 @app.route("/login/google")
@@ -329,10 +412,10 @@ def google_callback():
             db.session.commit()
 
     # ĐĂNG NHẬP
-    session["user_id"]    = user.user_id          # <- đừng dùng user.id
+    session["user_id"] = user.user_id  # <- đừng dùng user.id
     session["user_email"] = user.email
-    session["user_name"]  = user.name or display_name or user.email
-    session["role"]       = _role_to_str(user.role).lower()
+    session["user_name"] = user.name or display_name or user.email
+    session["role"] = _role_to_str(user.role).lower()
 
     flash("Đăng nhập bằng Google thành công!", "success")
     return redirect(url_for("customer_home"))
@@ -388,7 +471,7 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id = restaurant_id).first()
+    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id=restaurant_id).first()
 
     cart_items = []
     total_price = 0
@@ -398,6 +481,14 @@ def cart(restaurant_id):
         total_price = sum(item.quantity * item.dish.price for item in cart_items)
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+
+
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.exception("Lỗi 500: %s", error)  # log chi tiết vào terminal
+    return jsonify({"success": False, "error": "Internal Server Error"}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-

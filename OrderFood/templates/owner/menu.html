@@ -63,7 +63,6 @@
                 <th style="width:150px;" class="text-center">Mô tả</th>
                 <th class="text-center">Giá</th>
                 <th class="text-center">Category</th>
-                <th class="text-center">Active</th>
                 <th class="text-center">Xóa</th>
             </tr>
             </thead>
@@ -81,10 +80,7 @@
                 <td class="text-center">{{ dish.price }}đ</td>
                 <td class="text-center">{{ dish.category.name if dish.category else "-" }}</td>
                 <td class="text-center">
-                    <input type="checkbox" class="form-check-input" {% if dish.is_available %}checked{% endif %}>
-                </td>
-                <td class="text-center">
-                    <button type="submit" class="btn btn-danger btn-sm middle">Xóa</button>
+                    <button type="button" class="btn btn-danger btn-sm middle">Xóa</button>
                 </td>
             </tr>
             {% endfor %}
@@ -139,57 +135,4 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
-<script>
-let currentRowId = null;
-
-document.querySelectorAll('.dish-row').forEach(row => {
-    row.addEventListener('click', () => {
-        const id = row.dataset.id;
-        const name = row.dataset.name;
-        const note = row.dataset.note;
-        const price = row.dataset.price;
-        const category = row.dataset.category;
-        const image = row.dataset.image;
-        const active = row.dataset.active === '1';
-
-        const editFormEl = document.getElementById('editDishForm');
-        const collapse = bootstrap.Collapse.getOrCreateInstance(editFormEl);
-
-        if (currentRowId === id && editFormEl.classList.contains('show')) {
-            // Click lại cùng row -> ẩn form
-            collapse.hide();
-            currentRowId = null;
-            return;
-        }
-
-        // Cập nhật dữ liệu vào form
-        document.getElementById('editDishId').value = id;
-        document.getElementById('editName').value = name;
-        document.getElementById('editNote').value = note;
-        document.getElementById('editPrice').value = price;
-        document.getElementById('editCategory').value = category;
-        document.getElementById('editImagePreview').src = image || '';
-        document.getElementById('editActive').checked = active;
-
-        // Hiển thị form
-        collapse.show();
-        currentRowId = id;
-    });
-});
-    const categorySelect = document.getElementById('categorySelect');
-const newCategoryInput = document.getElementById('newCategoryInput');
-
-categorySelect.addEventListener('change', () => {
-    if(categorySelect.value === "new"){
-        newCategoryInput.classList.remove('d-none');
-        newCategoryInput.required = true;
-    } else {
-        newCategoryInput.classList.add('d-none');
-        newCategoryInput.required = false;
-    }
-});
-
-</script>
-
-
 {% endblock %}
