@@ -1,83 +1,77 @@
 from secrets import token_urlsafe
+import hmac, hashlib
+from urllib.parse import urlencode , quote_plus
+from datetime import datetime
 
-from flask import render_template, request, redirect, url_for, flash, session, jsonify
+from flask import (
+    render_template, request, redirect, url_for, flash, session, jsonify,
+    current_app, abort
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from OrderFood import app, dao_index, oauth
 from OrderFood.dao_index import *
-from OrderFood.models import Restaurant, Category, Customer, Cart, CartItem
+from OrderFood.models import *
 from admin_service import is_admin
+
 
 from flask_login import login_user, logout_user, current_user, login_required
 import cloudinary.uploader
 
 
+# ================== Helpers (roles) ==================
 ENUM_UPPERCASE = True  # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
-
 
 def norm_role_for_db(role: str) -> str:
     role = (role or "customer").strip().lower()
     if ENUM_UPPERCASE:
         return "CUSTOMER" if role == "customer" else "RESTAURANT_OWNER"
-    return role  # dùng chữ thường
-
+    return role
 
 def _role_to_str(r):
-    # nếu r là Enum => lấy .value, còn lại giữ nguyên
     return getattr(r, "value", r)
 
-
 def is_customer(role: str) -> bool:
-    # return role in ("customer", "CUSTOMER")
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
 
-
 def is_owner(role: str) -> bool:
-    # return role in ("restaurant_owner", "RESTAURANT_OWNER")
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "restaurant_owner"
 
 
+# ================== Trang chính / auth ==================
 @app.route("/")
 def index():
-    # Params
     keyword = (request.args.get("search") or "").strip()
     rating_filter = request.args.get("rating")
     location_filter = request.args.get("location")
     page = request.args.get("page", 1, type=int)
     per_page = 20
 
-    # Lấy danh sách ban đầu
     if not keyword:
-        restaurants = Restaurant.query.limit(50).all()   # mặc định hiển thị 50
+        restaurants = Restaurant.query.limit(50).all()
     else:
-        by_name = dao_index.get_restaurants_by_name(keyword)               # list[Restaurant]
-        by_dish = dao_index.get_restaurants_by_dishes_name(keyword)        # list[Restaurant]
-        # Hợp nhất theo restaurant_id để không trùng
+        by_name = dao_index.get_restaurants_by_name(keyword)
+        by_dish = dao_index.get_restaurants_by_dishes_name(keyword)
         restaurants = list({r.restaurant_id: r for r in (by_name + by_dish)}.values())
 
-    # Lọc rating (nếu có)
     if rating_filter and rating_filter.isdigit():
         min_rating = int(rating_filter)
         restaurants = [r for r in restaurants if (r.rating_point or 0) >= min_rating]
 
-    # Lọc địa điểm (nếu có)
     if location_filter:
         restaurants = [r for r in restaurants if r.address and location_filter in r.address]
 
-    # Danh sách địa điểm để render dropdown
     locations = [row[0] for row in Restaurant.query.with_entities(Restaurant.address)
                  .filter(Restaurant.address.isnot(None)).distinct().all()]
 
-    # Sắp xếp & phân trang
     restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
     total = len(restaurants)
     start = (page - 1) * per_page
     end = start + per_page
     restaurants_page = restaurants[start:end]
 
-    # Gắn hiển thị sao (để template có thể vẽ rating)
     restaurants_with_stars = [
         {"restaurant": r, "stars": dao_index.get_star_display(r.rating_point or 0)}
         for r in restaurants_page
@@ -90,7 +84,8 @@ def index():
         page=page,
         per_page=per_page,
         total=total,
-    )
+    )  # :contentReference[oaicite:2]{index=2}
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -110,23 +105,19 @@ def register():
             return redirect(url_for("register"))
 
         hashed = generate_password_hash(password)
-        # Tạo user
         create_user(name=name, email=email, phone=phone, hashed_password=hashed, role=role)
 
-        # LẤY user vừa tạo để đưa vào session
         user = get_user_by_email(email)
-
-        # ---- AUTO LOGIN ----
         session["user_id"] = user.user_id
         session["user_email"] = user.email
         session["user_name"] = user.name
-        role_val = getattr(user.role, "value", user.role)  # Enum hoặc str
+        role_val = getattr(user.role, "value", user.role)
         session["role"] = (role_val or "").lower()
 
         flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
         return redirect(url_for("index"))
 
-    return render_template("auth.html")
+    return render_template("auth.html")  # :contentReference[oaicite:3]{index=3}
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -160,16 +151,16 @@ def logout():
     flash("Đã đăng xuất", "info")
     return redirect(url_for("index"))
 
+
+# ================== Customer / Restaurant ==================
 @app.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
 
-    # Lấy 50 nhà hàng, sắp xếp theo rating giảm dần
     restaurants = Restaurant.query.limit(50).all()
     restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
 
-    # Gắn thêm hiển thị sao
     restaurants_with_stars = []
     for r in restaurants:
         restaurants_with_stars.append({
@@ -182,19 +173,14 @@ def customer_home():
 
 @app.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
-    # Lấy nhà hàng; nếu không có thì 404
     res = dao_index.get_restaurant_by_id(restaurant_id)
     if not res:
         abort(404)
 
-    # Lấy món & category theo res_id (có thể eager-load nếu cần)
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     categories = Category.query.filter_by(res_id=restaurant_id).all()
-
-    # Hiển thị sao an toàn khi rating_point = None
     stars = dao_index.get_star_display(res.rating_point or 0)
 
-    # Đếm số item trong giỏ của user hiện tại (nếu đăng nhập)
     cart_items_count = 0
     user_id = session.get("user_id")
     if user_id:
@@ -213,9 +199,10 @@ def restaurant_detail(restaurant_id):
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-    )
+    )  # :contentReference[oaicite:4]{index=4}
 
 
+# ================== Owner ==================
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
@@ -223,9 +210,7 @@ def owner_home():
     return render_template("owner_home.html")
 
 
-# chỉnh sửa thực đơn của owner
 @app.route("/owner/menu")
-# @login_required
 def get_menu():
     user_id = session.get("user_id")
     if not user_id:
@@ -238,14 +223,6 @@ def get_menu():
 
     categories = get_categories_by_owner_id(user_id)
     return render_template("owner/menu.html", dishes=dishes, categories=categories)
-
-
-    return render_template("customer_home.html", restaurants=restaurants_with_stars,
-                           locations = locations,
-                           page=page,
-                           per_page= per_page,
-                           total = total)
-
 
 
 @app.route("/owner/add_dish", methods=["POST"])
@@ -263,7 +240,7 @@ def add_dish():
     name = request.form.get("name").strip()
     price = request.form.get("price")
     note = request.form.get("note")
-    image_url = request.form.get("image_url")  # nhận link Cloudinary từ JS
+    image_url = request.form.get("image_url")
 
     if not name or not price:
         return jsonify({"success": False, "error": "Tên món hoặc giá không được để trống"})
@@ -271,10 +248,8 @@ def add_dish():
     category_name = None
     category_id = None
 
-    # Nếu chọn category cũ
     selected_category = request.form.get("category")
     if selected_category == "new":
-        # Lấy tên category mới
         category_name = request.form.get("new_category", "").strip()
         if category_name:
             category = Category.query.filter_by(res_id=res_id, name=category_name).first()
@@ -314,20 +289,17 @@ def add_dish():
     }})
 
 
-# ================= GOOGLE LOGIN =================
-
+# ================== Google Login ==================
 @app.route("/login/google")
 def login_google():
     redirect_uri = url_for("google_callback", _external=True)
     nonce = token_urlsafe(16)
     session["oidc_nonce"] = nonce
-    # prompt=consent là tùy chọn
     return oauth.google.authorize_redirect(
         redirect_uri,
         nonce=nonce,
         prompt="consent",
     )
-
 
 @app.route("/auth/google/callback")
 def google_callback():
@@ -357,8 +329,7 @@ def google_callback():
             user.name = display_name
             db.session.commit()
 
-    # ĐĂNG NHẬP
-    session["user_id"] = user.user_id  # <- đừng dùng user.id
+    session["user_id"] = user.user_id
     session["user_email"] = user.email
     session["user_name"] = user.name or display_name or user.email
     session["role"] = _role_to_str(user.role).lower()
@@ -366,6 +337,8 @@ def google_callback():
     flash("Đăng nhập bằng Google thành công!", "success")
     return redirect(url_for("customer_home"))
 
+
+# ================== Cart APIs ==================
 @app.route('/api/cart', methods=['POST'])
 def add_to_cart():
     data = request.get_json()
@@ -382,7 +355,6 @@ def add_to_cart():
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
 
-    # Tìm giỏ hàng đang mở
     cart = Cart.query.filter_by(
         cus_id=user_id, res_id=restaurant_id, is_open=True
     ).first()
@@ -392,7 +364,6 @@ def add_to_cart():
         db.session.add(cart)
         db.session.commit()
 
-    # Thêm hoặc tăng số lượng món
     cart_item = CartItem.query.filter_by(cart_id=cart.cart_id, dish_id=dish_id).first()
     if cart_item:
         cart_item.quantity += 1
@@ -402,7 +373,6 @@ def add_to_cart():
 
     db.session.commit()
 
-    # Đếm tổng số sản phẩm trong giỏ
     total_items = sum(item.quantity for item in cart.items)
     return jsonify({"total_items": total_items})
 
@@ -416,7 +386,8 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id = restaurant_id).first()
+
+    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id=restaurant_id).first()
 
     cart_items = []
     total_price = 0
@@ -426,6 +397,227 @@ def cart(restaurant_id):
         total_price = sum(item.quantity * item.dish.price for item in cart_items)
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+# :contentReference[oaicite:5]{index=5}
+
+
+
+def _vnp_sign(params: dict) -> str:
+    data = {k: v for k, v in params.items() if k not in ("vnp_SecureHash", "vnp_SecureHashType")}
+    query = urlencode(sorted(data.items()), quote_via=quote_plus)  # dùng quote_plus
+    secret = current_app.config["VNP_HASH_SECRET"]
+    return hmac.new(secret.encode("utf-8"), query.encode("utf-8"), hashlib.sha512).hexdigest()
+
+
+
+# ==== checkout & redirect (sửa route hiện có) ====
+@app.route("/checkout/vnpay")
+@app.route("/checkout/vnpay/<int:restaurant_id>")
+def checkout_vnpay(restaurant_id=None):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Bạn cần đăng nhập trước khi thanh toán.", "warning")
+        return redirect(url_for("login", next=request.url))
+
+    rid = restaurant_id or request.args.get("restaurant_id", type=int)
+    if not rid:
+        # fallback: nếu user chỉ có 1 giỏ mở thì dùng luôn
+        open_carts = Cart.query.filter_by(cus_id=user_id, is_open=True).all()
+        if len(open_carts) == 1:
+            rid = open_carts[0].res_id
+    if not rid:
+        abort(400, "Thiếu restaurant_id")
+
+    cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, is_open=True).first()
+    if not cart or not cart.items:
+        flash("Giỏ hàng trống.", "warning")
+        return redirect(url_for("restaurant_detail", restaurant_id=rid))
+
+    total_price = sum((ci.quantity or 0) * (ci.dish.price or 0) for ci in cart.items)
+    amount_vnp = int(total_price) * 100  # VND x 100 theo quy định VNPay
+    if amount_vnp <= 0:
+        flash("Tổng tiền không hợp lệ.", "danger")
+        return redirect(url_for("cart", restaurant_id=rid))
+
+    # Tạo order/payment PENDING
+    order = Order(
+        customer_id=user_id,
+        restaurant_id=rid,
+        cart_id=cart.cart_id,
+        status=StatusOrder.PENDING,
+        total_price=total_price,
+        created_date=datetime.utcnow(),
+    )
+    db.session.add(order)
+    db.session.flush()  # để có order_id
+
+    payment = Payment(order_id=order.order_id, status=StatusPayment.PENDING)
+    db.session.add(payment)
+    db.session.commit()
+
+    # Build tham số VNPay
+    client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "127.0.0.1").split(",")[0].strip()
+    params = {
+        "vnp_Version": "2.1.0",
+        "vnp_Command": "pay",
+        "vnp_TmnCode": current_app.config["VNP_TMN_CODE"],
+        "vnp_Amount": amount_vnp,
+        "vnp_CurrCode": "VND",
+        "vnp_TxnRef": f"OD{order.order_id}",
+        "vnp_OrderInfo": f"Order {order.order_id}",  # tránh ký tự lạ như '#'
+        "vnp_OrderType": "other",
+        "vnp_Locale": "vn",
+        "vnp_IpAddr": client_ip,
+        "vnp_CreateDate": datetime.utcnow().strftime("%Y%m%d%H%M%S"),
+        "vnp_ReturnUrl": current_app.config["VNP_RETURN_URL"],
+        "vnp_SecureHashType": "HmacSHA512",  # GỬI KÈM (không đưa vào ký)
+    }
+    params["vnp_SecureHash"] = _vnp_sign(params)
+    pay_url = f"{current_app.config['VNP_PAY_URL']}?{urlencode(params, quote_via=quote_plus)}"
+    return redirect(pay_url)
+
+
+
+@app.route("/vnpay_return")
+def vnpay_return():
+    data = dict(request.args)
+    received_hash = data.get("vnp_SecureHash", "")
+    calc_hash = _vnp_sign(data)
+    valid = hmac.compare_digest(received_hash, calc_hash)
+
+    txn_ref = data.get("vnp_TxnRef", "")
+    try:
+        order_id = int(txn_ref.replace("OD", ""))
+    except ValueError:
+        order_id = None
+
+    order = Order.query.get_or_404(order_id)
+
+    if valid and data.get("vnp_ResponseCode") == "00":
+        # 1) Set order PAID
+        order.status = StatusOrder.PAID
+
+        # 2) Đảm bảo có bản ghi payment cho order này
+        pay = Payment.query.filter_by(order_id=order.order_id).first()
+        if not pay:
+            pay = Payment(order_id=order.order_id, status=StatusPayment.PAID)
+            db.session.add(pay)
+        else:
+            pay.status = StatusPayment.PAID
+
+        # 3) Đóng giỏ
+        if order.cart:
+            order.cart.is_open = False
+            order.cart.status = StatusCart.CHECKOUT
+
+        db.session.commit()
+        flash("Thanh toán thành công.", "success")
+    else:
+        flash("Thanh toán chưa thành công hoặc không hợp lệ.", "warning")
+
+    # -> Luôn chuyển về trang theo dõi đơn
+    return redirect(url_for("order_track", order_id=order.order_id))
+
+
+
+
+
+
+@app.route("/vnpay_ipn")
+def vnpay_ipn():
+    data = dict(request.args)
+    received_hash = data.get("vnp_SecureHash", "")
+    calc_hash = _vnp_sign(data)
+    if not hmac.compare_digest(received_hash, calc_hash):
+        # Sai chữ ký
+        return jsonify({"RspCode": "97", "Message": "Invalid signature"})
+
+    txn_ref = data.get("vnp_TxnRef", "")
+    try:
+        order_id = int(txn_ref.replace("OD", ""))
+    except ValueError:
+        return jsonify({"RspCode": "01", "Message": "Order not found"})
+
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"RspCode": "01", "Message": "Order not found"})
+
+    if data.get("vnp_ResponseCode") == "00":
+        order.status = StatusOrder.PAID
+        if order.cart:
+            order.cart.is_open = False
+            order.cart.status = StatusCart.CHECKOUT
+        if order.payment:
+            order.payment.status = StatusPayment.PAID
+        db.session.commit()
+        return jsonify({"RspCode": "00", "Message": "Confirm Success"})
+    else:
+        # tuỳ trường hợp có thể giữ PENDING hoặc đánh dấu CANCELED
+        db.session.commit()
+        return jsonify({"RspCode": "00", "Message": "Confirm Received"})
+
+@app.route("/orders")
+def my_orders():
+    uid = session.get("user_id")
+    if not uid:
+        flash("Vui lòng đăng nhập để xem đơn hàng.", "warning")
+        return redirect(url_for("login", next=request.url))
+
+    # (tuỳ chọn) chỉ cho Customer vào
+    if not is_customer(session.get("role")):
+        abort(403)
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+    status_filter = (request.args.get("status") or "").strip().upper()
+
+    q = Order.query.filter_by(customer_id=uid).order_by(Order.created_date.desc())
+    if status_filter in ("PENDING", "PAID", "ACCEPT", "ACCEPTED", "CANCELED", "COMPLETED"):
+        if status_filter == "ACCEPT":
+            status_filter = "ACCEPTED"
+        q = q.filter(Order.status == getattr(StatusOrder, status_filter))
+
+    total = q.count()
+    orders = q.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        "customer/orders_list.html",
+        orders=orders, page=page, per_page=per_page,
+        total=total, total_pages=total_pages, status_filter=status_filter
+    )
+
+
+@app.route("/order/<int:order_id>/track")
+def order_track(order_id):
+    uid = session.get("user_id")
+    if not uid:
+        return redirect(url_for("login", next=request.url))
+
+    order = Order.query.get_or_404(order_id)
+
+    # chỉ chủ đơn (hoặc admin) mới xem được
+    if order.customer_id != uid and (session.get("role") or "").upper() != "ADMIN":
+        abort(403)
+
+    s = getattr(order.status, "value", order.status) or ""
+    s = s.upper()
+    is_paid      = (s == "PAID")
+    is_accepted  = (s in ("ACCEPTED", "ACCEPT"))
+    is_canceled  = (s == "CANCELED")
+    is_completed = (s == "COMPLETED")
+
+    if is_paid: active_idx = 0
+    elif is_accepted: active_idx = 1
+    elif is_canceled or is_completed: active_idx = 2
+    else: active_idx = -1
+
+    last_label = "Đã hủy" if is_canceled else "Đã giao hàng thành công"
+
+    return render_template(
+        "customer/order_track.html",
+        order=order, active_idx=active_idx, last_label=last_label, status_str=s
+    )
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

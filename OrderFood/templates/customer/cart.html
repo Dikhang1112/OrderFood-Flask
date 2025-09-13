@@ -3,34 +3,48 @@
 
 {% block content %}
 <h1>Giỏ Hàng</h1>
-    {% if cart_items %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Món</th>
-                    <th>Giá</th>
-                    <th>Số lượng</th>
-                    <th>Tổng</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in cart_items %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ item.dish.name }}</td>
-                    <td>{{ "{:,.0f}".format(item.dish.price) }} đ</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ "{:,.0f}".format(item.quantity * item.dish.price) }} đ</td>
-                </tr>
-                {% endfor %}
-                <tr>
-                    <td colspan="4" style="text-align:right;"><strong>Tổng cộng:</strong></td>
-                    <td><strong>{{ "{:,.0f}".format(total_price) }} đ</strong></td>
-                </tr>
-            </tbody>
-        </table>
-    {% else %}
-        <p>Giỏ hàng của bạn đang trống.</p>
-    {% endif %}
+{% if cart_items %}
+<table class="table">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Món</th>
+        <th>Giá</th>
+        <th>Số lượng</th>
+        <th>Tổng</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in cart_items %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ item.dish.name }}</td>
+        <td>{{ "{:,.0f}".format(item.dish.price) }} đ</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ "{:,.0f}".format(item.quantity * item.dish.price) }} đ</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <td colspan="4" style="text-align:right;"><strong>Tổng cộng:</strong></td>
+        <td><strong>{{ "{:,.0f}".format(total_price) }} đ</strong></td>
+        {% if cart and cart.items|length > 0 %}
+        {% set rid = cart.res_id if cart and cart.res_id else (cart.restaurant.restaurant_id if cart and cart.restaurant
+        else None) %}
+        <div class="text-end mt-3">
+            <a class="btn btn-primary"
+               href="{{ url_for('checkout_vnpay', restaurant_id=rid) }}">
+                <img src="{{ url_for('static', filename='img/vnpay.jpg') }}"
+                     alt="VNPay" style="height:20px;margin-right:6px;vertical-align:middle;" loading="lazy">
+
+                Thanh toán VNPay
+            </a>
+        </div>
+        {% endif %}
+
+    </tr>
+    </tbody>
+</table>
+{% else %}
+<p>Giỏ hàng của bạn đang trống.</p>
+{% endif %}
 {% endblock %}

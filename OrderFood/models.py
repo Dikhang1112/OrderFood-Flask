@@ -32,6 +32,7 @@ class StatusCart(Enum):
 class StatusOrder(Enum):
     PENDING = "PENDING"
     PAID = "PAID"
+    ACCEPTED = "ACCEPTED"
     CANCELED = "CANCELED"
     COMPLETED = "COMPLETED"
 
