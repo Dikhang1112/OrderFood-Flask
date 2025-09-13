@@ -9,6 +9,8 @@ from OrderFood.models import Restaurant, Category, Customer, Cart, CartItem
 from admin_service import is_admin
 
 from flask_login import login_user, logout_user, current_user, login_required
+import cloudinary.uploader
+
 
 ENUM_UPPERCASE = True  # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 
@@ -180,19 +182,29 @@ def customer_home():
 
 @app.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
+    # Lấy nhà hàng; nếu không có thì 404
     res = dao_index.get_restaurant_by_id(restaurant_id)
-    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
+    if not res:
+        abort(404)
 
-    # Bổ sung: hiển thị sao, categories, giỏ hàng
-    stars = dao_index.get_star_display(res.rating_point or 0)
+    # Lấy món & category theo res_id (có thể eager-load nếu cần)
+    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     categories = Category.query.filter_by(res_id=restaurant_id).all()
 
+    # Hiển thị sao an toàn khi rating_point = None
+    stars = dao_index.get_star_display(res.rating_point or 0)
+
+    # Đếm số item trong giỏ của user hiện tại (nếu đăng nhập)
     cart_items_count = 0
     user_id = session.get("user_id")
     if user_id:
-        cart = Cart.query.filter_by(cus_id=user_id, res_id=res.restaurant_id).first()
-        if cart:
-            cart_items_count = sum(item.quantity for item in cart.items)
+        cart = (
+            Cart.query.options(joinedload(Cart.items))
+            .filter_by(cus_id=user_id, res_id=res.restaurant_id)
+            .first()
+        )
+        if cart and cart.items:
+            cart_items_count = sum(item.quantity or 0 for item in cart.items)
 
     return render_template(
         "/customer/restaurant_detail.html",
@@ -200,7 +212,7 @@ def restaurant_detail(restaurant_id):
         dishes=dishes,
         stars=stars,
         categories=categories,
-        cart_items_count=cart_items_count
+        cart_items_count=cart_items_count,
     )
 
 
@@ -218,9 +230,88 @@ def get_menu():
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("login"))
+    keyword = (request.args.get('keyword') or '').strip()
+    if not keyword:
+        dishes = load_menu_owner(user_id)
+    else:
+        dishes = get_dishes_by_name(user_id, keyword)
 
-    dishes = load_menu_owner(user_id)
-    return render_template("owner/menu.html", dishes=dishes)
+    categories = get_categories_by_owner_id(user_id)
+    return render_template("owner/menu.html", dishes=dishes, categories=categories)
+
+
+    return render_template("customer_home.html", restaurants=restaurants_with_stars,
+                           locations = locations,
+                           page=page,
+                           per_page= per_page,
+                           total = total)
+
+
+
+@app.route("/owner/add_dish", methods=["POST"])
+def add_dish():
+    user_id = session.get("user_id")
+    user = User.query.get(user_id)
+    if not user_id:
+        return jsonify({"success": False, "error": "Chưa login"})
+
+    if not user or not user.restaurant_owner or not user.restaurant_owner.restaurant:
+        return jsonify({"success": False, "error": "Bạn chưa có nhà hàng"})
+
+    res_id = user.restaurant_owner.restaurant.restaurant_id
+
+    name = request.form.get("name").strip()
+    price = request.form.get("price")
+    note = request.form.get("note")
+    image_url = request.form.get("image_url")  # nhận link Cloudinary từ JS
+
+    if not name or not price:
+        return jsonify({"success": False, "error": "Tên món hoặc giá không được để trống"})
+
+    category_name = None
+    category_id = None
+
+    # Nếu chọn category cũ
+    selected_category = request.form.get("category")
+    if selected_category == "new":
+        # Lấy tên category mới
+        category_name = request.form.get("new_category", "").strip()
+        if category_name:
+            category = Category.query.filter_by(res_id=res_id, name=category_name).first()
+            if not category:
+                category = Category(name=category_name, res_id=res_id)
+                db.session.add(category)
+                db.session.commit()
+            category_id = category.category_id
+    else:
+        category_id = int(selected_category) if selected_category else None
+
+    new_dish = Dish(
+        name=name,
+        price=price,
+        note=note,
+        category_id=category_id,
+        res_id=res_id,
+        image=image_url
+    )
+    db.session.add(new_dish)
+    db.session.commit()
+
+    category_name_for_json = ""
+    if category_id:
+        category_obj = Category.query.get(category_id)
+        if category_obj:
+            category_name_for_json = category_obj.name
+
+    return jsonify({"success": True, "dish": {
+        "dish_id": new_dish.dish_id,
+        "name": new_dish.name,
+        "price": new_dish.price,
+        "note": new_dish.note,
+        "category": category_name_for_json,
+        "image": new_dish.image,
+        "active": new_dish.is_available
+    }})
 
 
 # ================= GOOGLE LOGIN =================

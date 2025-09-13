@@ -11,16 +11,22 @@ import cloudinary
 
 from OrderFood.helper.NotiHelper import init_app as init_noti
 
+# ================== Load .env ==================
 load_dotenv()
 
-# ===== ENV =====
+# ================== Global extensions ==================
+db = SQLAlchemy()
+mail = Mail()
+oauth = OAuth()
+
+# ================== ENV & defaults ==================
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
+
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
-    # fallback local (đổi mật khẩu nếu cần)
     "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
 )
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "false").lower() == "true"
 
 MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
@@ -41,41 +47,45 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 SEED_DB = os.getenv("SEED_DB", "false").lower() == "true"
 SEED_CLEAR = os.getenv("SEED_CLEAR", "false").lower() == "true"
 
-mail = Mail()
-oauth = OAuth()
-db = SQLAlchemy()
-
 
 def _init_cloudinary():
-    cloudinary.config(
-        cloud_name=CLOUDINARY_CLOUD_NAME,
-        api_key=CLOUDINARY_API_KEY,
-        api_secret=CLOUDINARY_API_SECRET,
-    )
+    """
+    Cấu hình Cloudinary nếu đủ biến môi trường. Không hard-code secret ở code.
+    """
+    if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+        cloudinary.config(
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+        )
 
 
 def _init_oauth(app: Flask):
+    """
+    Khởi tạo OAuth Google nếu có CLIENT_ID/SECRET.
+    """
     oauth.init_app(app)
-    oauth.register(
-        name="google",
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_kwargs={"scope": "openid email profile"},
-    )
+    if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+        oauth.register(
+            name="google",
+            client_id=GOOGLE_CLIENT_ID,
+            client_secret=GOOGLE_CLIENT_SECRET,
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
 
 
 def _seed_small_sample():
     """Seed nhẹ: 3 khách, 3 chủ quán, 2 admin, 3 nhà hàng, 5 món."""
-    from OrderFood import models
     from sqlalchemy import text
+    from OrderFood import models
 
     if SEED_CLEAR:
         db.session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
         for tbl in [
             models.CartItem, models.Cart, models.Dish, models.Category,
             models.Restaurant, models.RestaurantOwner, models.Admin,
-            models.Customer, models.User
+            models.Customer, models.User,
         ]:
             db.session.query(tbl).delete()
         db.session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
@@ -83,12 +93,11 @@ def _seed_small_sample():
 
     pwd = generate_password_hash("123")
 
-    # Customers: 1..3
+    # Users
     u1 = models.User(user_id=1, name='cus1', email='cus1@gmail.com', password=pwd, role='CUSTOMER')
     u2 = models.User(user_id=2, name='cus2', email='cus2@gmail.com', password=pwd, role='CUSTOMER')
     u3 = models.User(user_id=3, name='cus3', email='cus3@gmail.com', password=pwd, role='CUSTOMER')
 
-    # Restaurant Owners: 4..6
     ro1 = models.User(user_id=4, name='ro1', email='ro1@gmail.com', password=pwd, role='RESTAURANT_OWNER',
                       phone='01346578989', avatar='')
     ro2 = models.User(user_id=5, name='ro2', email='ro2@gmail.com', password=pwd, role='RESTAURANT_OWNER',
@@ -96,14 +105,13 @@ def _seed_small_sample():
     ro3 = models.User(user_id=6, name='ro3', email='ro3@gmail.com', password=pwd, role='RESTAURANT_OWNER',
                       phone='0134657137')
 
-    # Admins: 7..8 (tránh đụng ID 4..6 của owner)
     a1 = models.User(user_id=7, name="a1", email="a1@gmail.com", password=pwd, role="ADMIN")
     a2 = models.User(user_id=8, name="a2", email="a2@gmail.com", password=pwd, role="ADMIN")
 
     db.session.add_all([u1, u2, u3, ro1, ro2, ro3, a1, a2])
     db.session.commit()
 
-    # role tables
+    # Role tables
     db.session.add_all([
         models.Customer(user_id=u1.user_id),
         models.Customer(user_id=u2.user_id),
@@ -116,7 +124,7 @@ def _seed_small_sample():
     ])
     db.session.commit()
 
-    # Restaurants: 1..3 (owner: 4..6, approved by a1/a2)
+    # Restaurants
     res1 = models.Restaurant(
         restaurant_id=1, name='Nha hang 1', res_owner_id=ro1.user_id, status='PENDING',
         image="https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res3_uezgk3.jpg",
@@ -165,18 +173,22 @@ def create_app():
         MAIL_DEFAULT_SENDER=MAIL_DEFAULT_SENDER,
     )
 
+    # Init extensions
     db.init_app(app)
     mail.init_app(app)
     _init_cloudinary()
     _init_oauth(app)
 
-    # Blueprints & notifications
-    from OrderFood import admin_service
+    # Đăng ký blueprint sau khi init extensions để tránh circular import
+    from OrderFood import admin_service  # file: OrderFood/admin_service.py
     app.register_blueprint(admin_service.admin_bp)
+
+    # Notifications
     init_noti(app)
 
+    # Tạo bảng & seed (nếu bật)
     with app.app_context():
-        from OrderFood import models
+        from OrderFood import models  # đảm bảo models được import khi app context có sẵn
         db.create_all()
         if SEED_DB:
             _seed_small_sample()
@@ -184,4 +196,5 @@ def create_app():
     return app
 
 
+# WSGI entrypoint nếu chạy `flask run` hoặc gunicorn
 app = create_app()

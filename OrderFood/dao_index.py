@@ -1,7 +1,7 @@
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from OrderFood.models import db, User, Dish, RestaurantOwner, Restaurant
+from OrderFood.models import db, User, Dish, RestaurantOwner, Restaurant, Category
 
 ENUM_UPPERCASE = True  # True nếu DB dùng 'CUSTOMER','RESTAURANT_OWNER'
 
@@ -52,6 +52,29 @@ def load_menu_owner(owner_id: int):
     restaurant_id = owner.restaurant.restaurant_id
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     return dishes
+
+def get_categories_by_owner_id(owner_id: int):
+    restaurant = Restaurant.query.filter_by(res_owner_id=owner_id).first()
+    if not restaurant:
+        return []  # owner chưa có nhà hàng
+
+    # Lấy tất cả category thuộc nhà hàng đó
+    categories = Category.query.filter_by(res_id=restaurant.restaurant_id).all()
+    return categories
+
+
+
+def get_dishes_by_name(owner_id, keyword: str):
+    dishes = load_menu_owner(owner_id)
+    if not keyword:
+        return []
+    keyword = keyword.strip().lower()
+    filtered_dishes = [
+        dish for dish in dishes
+        if keyword in (dish.name or "").lower()
+    ]
+    return filtered_dishes
+
 
 def restaurant_detail(restaurant_id: int):
     return Dish.query.filter_by(res_id=restaurant_id).all()
