@@ -54,6 +54,7 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
 
+
     # Cloudinary (theo .env)
     cloudinary.config(
         cloud_name=CLOUDINARY_CLOUD_NAME,
