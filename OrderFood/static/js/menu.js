@@ -66,9 +66,6 @@ async function addDish() {
                         <td class="text-center">${dish.price}đ</td>
                         <td class="text-center">${dish.category || '-'}</td>
                         <td class="text-center">
-                            <input type="checkbox" class="form-check-input" ${dish.active ? 'checked' : ''}>
-                        </td>
-                        <td class="text-center">
                             <button type="submit" class="btn btn-danger btn-sm middle">Xóa</button>
                         </td>
                     `;
@@ -270,31 +267,31 @@ editDishForm.addEventListener('submit', async function(e) {
 
 // xoa
 
-document.querySelectorAll('.dish-row .btn-danger').forEach(button => {
-    button.addEventListener('click', async function (e) {
-        e.stopPropagation(); // ⛔ Không cho bubble lên <tr>
+const dishesTableBody = document.getElementById('dishesTableBody');
+
+dishesTableBody.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('btn-danger')) {
+        e.stopPropagation();
 
         if (!confirm("Bạn có chắc chắn muốn xoá món ăn này?")) return;
 
-        const row = this.closest('.dish-row');
+        const row = e.target.closest('.dish-row');
         const dishId = row.dataset.id;
 
         try {
             const res = await fetch(`/owner/menu/${dishId}`, {
                 method: "DELETE"
             });
-
             const data = await res.json();
+
             if (data.success) {
                 alert(data.message || "Xoá thành công");
                 row.remove();
 
-                // Ẩn form chỉnh sửa nếu đang hiển thị
                 const editFormEl = document.getElementById("editDishForm");
                 const collapse = bootstrap.Collapse.getInstance(editFormEl);
                 if (collapse) collapse.hide();
 
-                // Nếu không còn món ăn nào thì hiển thị message
                 if (document.querySelectorAll(".dish-row").length === 0) {
                     document.getElementById("noDishesMsg").style.display = "block";
                 }
@@ -305,5 +302,5 @@ document.querySelectorAll('.dish-row .btn-danger').forEach(button => {
             console.error("Lỗi xoá món ăn:", err);
             alert("Lỗi server khi xoá món ăn");
         }
-    });
+    }
 });

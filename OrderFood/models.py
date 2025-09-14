@@ -2,7 +2,7 @@
 from datetime import timedelta, datetime, timezone
 from enum import Enum
 
-from sqlalchemy import Enum as SAEnum, String
+from sqlalchemy import Enum as SAEnum, String, Index
 from sqlalchemy import UniqueConstraint
 
 from OrderFood import db
@@ -180,15 +180,12 @@ class Cart(db.Model):
     __tablename__ = "cart"
 
     cart_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-
     cus_id = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=False)
     res_id = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
     status = db.Column(SAEnum(StatusCart, name="status_cart_enum"), nullable=False, default=StatusCart.ACTIVE)
 
-    is_open = db.Column(db.Boolean, nullable=False, default=True)
-
     __table_args__ = (
-        UniqueConstraint("cus_id", "res_id", "is_open", name="uq_cart_open_per_customer_restaurant"),
+        Index('ix_cart_customer_restaurant', 'cus_id', 'res_id'),
     )
 
     customer = db.relationship("Customer", backref=db.backref("carts", cascade="all, delete-orphan"))

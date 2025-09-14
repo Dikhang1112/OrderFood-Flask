@@ -1,27 +1,31 @@
 <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand"
-   href="{% if session.get('role') == 'RESTAURANT_OWNER' %}
+    <div class="container-fluid">
+        <a class="navbar-brand"
+           href="{% if session.get('role') == 'RESTAURANT_OWNER' %}
             {{ url_for('owner_home') }}
          {% elif session.get('role') == 'CUSTOMER' %}
             {{ url_for('index') }}
          {% else %}
             {{ url_for('index') }}
          {% endif %}">
-    OrderFood
-</a>
+            OrderFood
+        </a>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
 
         <div class="collapse navbar-collapse" id="mynavbar">
             <ul class="navbar-nav me-auto">
                 {% if session.get('role') == 'CUSTOMER' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a></li>
-                {% elif session.get('role') == 'restaurant_owner' %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('owner_home') }}">Trang chủ</a></li>
+                {% elif session.get('role') == 'RESTAURANT_OWNER' %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('get_menu') }}">Chỉnh sửa món ăn</a>
+                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_orders') }}">Quản lý đơn
+                    hàng</a></li>
                 {% elif session.get('role') == 'admin' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_home') }}">Admin</a></li>
                 {% endif %}

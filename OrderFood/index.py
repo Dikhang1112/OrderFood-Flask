@@ -13,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from OrderFood import app, dao_index, oauth
 from OrderFood.dao_index import *
 from OrderFood.models import *
-from admin_service import is_admin
+from OrderFood.admin_service import is_admin
 
 from flask_login import login_user, logout_user, current_user, login_required
 import cloudinary.uploader
@@ -240,7 +240,7 @@ def add_dish():
     user_id = session.get("user_id")
     user = User.query.get(user_id)
     if not user_id:
-        return jsonify({"success": False, "error": "Chưa login"})
+        return redirect(url_for("login"))
 
     if not user or not user.restaurant_owner or not user.restaurant_owner.restaurant:
         return jsonify({"success": False, "error": "Bạn chưa có nhà hàng"})
@@ -372,9 +372,99 @@ def delete_dish(dish_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/owner/orders")
+def manage_orders():
+    user_id = session.get("user_id")
+    user = User.query.get(user_id)
+    if not user_id:
+        return redirect(url_for("login"))
+
+    if not user or not user.restaurant_owner or not user.restaurant_owner.restaurant:
+        return jsonify({"success": False, "error": "Bạn chưa có nhà hàng"})
+
+    res_id = user.restaurant_owner.restaurant.restaurant_id
+
+    from OrderFood.models import StatusOrder
+
+    pending_orders = Order.query.filter_by(restaurant_id=res_id, status=StatusOrder.PAID).all()
+    approved_orders = Order.query.filter_by(restaurant_id=res_id, status=StatusOrder.ACCEPTED).all()
+    cancelled_orders = Order.query.filter_by(restaurant_id=res_id, status=StatusOrder.CANCELED).all()
+    completed_orders = Order.query.filter_by(restaurant_id=res_id, status=StatusOrder.COMPLETED).all()
+
+    return render_template("owner/manage_orders.html",
+                           pending_orders=pending_orders,
+                           approved_orders=approved_orders,
+                           cancelled_orders=cancelled_orders,
+                           completed_orders=completed_orders,
+                           res_id=res_id,
+                           )
 
 
-# ================== Google Login ==================
+from flask import jsonify
+
+@app.route("/owner/orders/<int:order_id>/approve", methods=["POST"])
+def approve_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    # Chỉ approve nếu trạng thái hiện tại là PAID
+    if isinstance(order.status, str):
+        # Nếu trong DB lưu string, chuyển sang Enum để gán
+        if order.status == StatusOrder.PAID.value:
+            order.status = StatusOrder.ACCEPTED
+        else:
+            return jsonify({"error": "Đơn hàng không ở trạng thái PAID"}), 400
+    else:
+        # Nếu là Enum
+        if order.status == StatusOrder.PAID:
+            order.status = StatusOrder.ACCEPTED
+        else:
+            return jsonify({"error": "Đơn hàng không ở trạng thái PAID"}), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "order_id": order.order_id,
+        "status": order.status.value,
+        "customer_name": order.customer.user.name,
+        "total_price": order.total_price,
+        "items": [{"name": item.dish.name, "quantity": item.quantity} for item in order.cart.items]
+    })
+
+@app.route("/owner/orders/<int:order_id>/cancel", methods=["POST"])
+def cancel_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    reason = data.get("reason", "")
+
+    # Cập nhật trạng thái
+    if isinstance(order.status, str):
+        order.status = StatusOrder.CANCELED.value
+    else:
+        order.status = StatusOrder.CANCELED
+
+    db.session.add(order)
+
+    # Tạo Refund nếu có payment
+    if order.payment:
+        refund = Refund(
+            payment_id=order.payment.payment_id,
+            reason=reason,
+            requested_by=Role.ADMIN,
+            created_at=datetime.utcnow(),
+            status=StatusRefund.REQUESTED
+        )
+        db.session.add(refund)
+
+    db.session.commit()
+
+    # Trả về JSON đầy đủ
+    return jsonify({
+        "order_id": order.order_id,
+        "status": getattr(order.status, "value", order.status),  # gửi status
+        "customer_name": order.customer.user.name,
+        "reason": reason
+    })
+
+#=========== Google Login ==================
 @app.route("/login/google")
 def login_google():
     redirect_uri = url_for("google_callback", _external=True)
@@ -442,11 +532,11 @@ def add_to_cart():
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
 
     cart = Cart.query.filter_by(
-        cus_id=user_id, res_id=restaurant_id, is_open=True
+        cus_id=user_id, res_id=restaurant_id, status=StatusCart.ACTIVE
     ).first()
 
     if not cart:
-        cart = Cart(cus_id=user_id, res_id=restaurant_id, is_open=True)
+        cart = Cart(cus_id=user_id, res_id=restaurant_id, status=StatusCart.ACTIVE)
         db.session.add(cart)
         db.session.commit()
 
@@ -472,7 +562,7 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-    cart = Cart.query.filter_by(cus_id=customer.user_id, is_open=True, res_id=restaurant_id).first()
+    cart = Cart.query.filter_by(cus_id=customer.user_id, res_id=restaurant_id, status=StatusCart.ACTIVE).first()
     cart_items = []
     total_price = 0
 
@@ -505,13 +595,13 @@ def checkout_vnpay(restaurant_id=None):
     rid = restaurant_id or request.args.get("restaurant_id", type=int)
     if not rid:
         # fallback: nếu user chỉ có 1 giỏ mở thì dùng luôn
-        open_carts = Cart.query.filter_by(cus_id=user_id, is_open=True).all()
+        active_carts = Cart.query.filter_by(cus_id=user_id, status=StatusCart.ACTIVE).all()
         if len(open_carts) == 1:
             rid = open_carts[0].res_id
     if not rid:
         abort(400, "Thiếu restaurant_id")
 
-    cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, is_open=True).first()
+    cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, status=StatusCart.ACTIVE).first()
     if not cart or not cart.items:
         flash("Giỏ hàng trống.", "warning")
         return redirect(url_for("restaurant_detail", restaurant_id=rid))
@@ -593,7 +683,6 @@ def vnpay_return():
 
         # 3) Đóng giỏ
         if order.cart:
-            order.cart.is_open = False
             order.cart.status = StatusCart.CHECKOUT
 
         db.session.commit()
@@ -627,7 +716,6 @@ def vnpay_ipn():
     if data.get("vnp_ResponseCode") == "00":
         order.status = StatusOrder.PAID
         if order.cart:
-            order.cart.is_open = False
             order.cart.status = StatusCart.CHECKOUT
         if order.payment:
             order.payment.status = StatusPayment.PAID
