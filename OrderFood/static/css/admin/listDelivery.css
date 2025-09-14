@@ -1,0 +1,71 @@
+:root {
+  --bd: rgba(0,0,0,.08);
+  --ok:#16a34a;
+  --warn:#f59e0b;
+  --err:#ef4444;
+}
+
+/* Table giống restaurant */
+.rs-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+/* Ô nhập thời gian chờ */
+.waiting-input {
+  min-width: 220px;   /* rộng hơn mặc định */
+  max-width: 260px;   /* có giới hạn để không quá dài */
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  padding: 6px 12px;
+}
+
+.rs-thead {
+  background: #0f172a;
+  color: #fff;
+  font-weight: 700;
+}
+
+.rs-row-head th {
+  padding: 14px 16px;
+  font-size: 15px;
+}
+
+.rs-body td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--bd);
+}
+
+.rs-row:hover {
+  background: #f9fafb;
+}
+
+/* Badge trạng thái */
+.rs-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+.rs-badge--ok { background: var(--ok); }
+.rs-badge--warn { background: var(--warn); }
+.rs-badge--err { background: var(--err); }
+
+/* Form set waiting_time */
+form input[name="waiting_time"] {
+  max-width: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+}
+
+form button {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 6px 16px;
+}

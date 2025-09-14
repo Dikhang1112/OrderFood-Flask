@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request
 from flask import current_app
+from sqlalchemy.orm import joinedload
 
 from OrderFood import db
 from OrderFood.dao.restaurant_dao import get_all_restaurants, get_restaurant_by_id
 from OrderFood.email_service import send_restaurant_status_email
-from OrderFood.models import StatusRes
+from OrderFood.models import StatusRes,Order
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -107,3 +108,38 @@ def approve_restaurant(restaurant_id: int):
         current_app.logger.warning("Không gửi được email thông báo APPROVE", exc_info=True)
 
     return jsonify({"ok": True, "id": restaurant_id, "status": res.status.value})
+
+@admin_bp.route("/delivery", methods=["GET"])
+def admin_delivery():
+    """Trang danh sách Orders + ô cập nhật waiting_time"""
+    if not is_admin(session.get("role")):
+        flash("Bạn không có quyền truy cập trang admin", "danger")
+        return redirect(url_for("index"))
+
+    orders = (Order.query
+              .options(joinedload(Order.customer), joinedload(Order.restaurant))
+              .order_by(Order.created_date.desc())
+              .all())
+    waiting_time = current_app.config.get("WAITING_TIME", 30)  # mặc định 30 phút
+
+    return render_template(
+        "admin/admin_delivery.html",
+        orders=orders,
+        current_waiting_time=waiting_time
+    )
+
+
+@admin_bp.route("/delivery/set_waiting_time", methods=["POST"])
+def set_waiting_time():
+    """Cập nhật waiting_time dùng khi tạo Order mới (VD: checkout VNPay)"""
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    wt = request.form.get("waiting_time", type=int)
+    if wt and wt > 0:
+        current_app.config["WAITING_TIME"] = wt
+        flash(f"Đã cập nhật waiting time = {wt} phút", "success")
+    else:
+        flash("Waiting time không hợp lệ", "danger")
+
+    return redirect(url_for("admin.admin_delivery"))

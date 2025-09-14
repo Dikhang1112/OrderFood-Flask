@@ -1,4 +1,5 @@
 # OrderFood/models.py
+from datetime import timedelta, datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Enum as SAEnum, String
@@ -226,13 +227,27 @@ class Order(db.Model):
 
     delivery_id = db.Column(db.Integer, db.ForeignKey("admin.user_id"), nullable=True)  # nếu có
 
-    waiting_time = db.Column(db.DateTime)  # do admin set
+    waiting_time = db.Column(db.Integer, nullable=False, default=10)  # đơn vị: phút
+
     created_date = db.Column(db.DateTime, nullable=False)
 
     customer = db.relationship("Customer", backref=db.backref("orders", cascade="all, delete-orphan"))
     restaurant = db.relationship("Restaurant", backref=db.backref("orders", cascade="all, delete-orphan"))
     cart = db.relationship("Cart", backref=db.backref("order", uselist=False))
     admin = db.relationship("Admin", backref=db.backref("orders", cascade="all, delete-orphan"))
+
+    @property
+    def expire_time(self):
+        """Trả về mốc thời gian hết hạn (created_date + waiting_time)."""
+        if self.created_date and self.waiting_time:
+            return self.created_date + timedelta(minutes=self.waiting_time)
+        return None
+
+    @property
+    def is_expired(self):
+        """Kiểm tra đơn đã hết hạn chưa (dựa theo status + expire_time)."""
+        now = datetime.now(timezone.utc)
+        return self.expire_time is not None and now >= self.expire_time
 
 
 class Notification(db.Model):
