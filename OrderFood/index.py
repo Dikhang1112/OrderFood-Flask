@@ -522,6 +522,8 @@ def checkout_vnpay(restaurant_id=None):
         flash("Tổng tiền không hợp lệ.", "danger")
         return redirect(url_for("cart", restaurant_id=rid))
 
+    waiting_time = current_app.config.get("WAITING_TIME", 30)  # mặc định 30 phút
+
     # Tạo order/payment PENDING
     order = Order(
         customer_id=user_id,
@@ -530,6 +532,7 @@ def checkout_vnpay(restaurant_id=None):
         status=StatusOrder.PENDING,
         total_price=total_price,
         created_date=datetime.utcnow(),
+        waiting_time=waiting_time
     )
     db.session.add(order)
     db.session.flush()  # để có order_id

@@ -10,6 +10,9 @@ from werkzeug.security import generate_password_hash
 import cloudinary
 
 from OrderFood.helper.NotiHelper import init_app as init_noti
+from apscheduler.schedulers.background import BackgroundScheduler
+from atexit import register as atexit_register
+from OrderFood.jobs import cancel_expired_orders
 
 # ================== Load .env ==================
 load_dotenv()
@@ -238,7 +241,18 @@ def create_app():
                 db.session.add_all(dishes_to_add)
                 db.session.commit()
             # nếu đã có dữ liệu: bỏ qua seeding để bảo toàn giao dịch
+    scheduler = BackgroundScheduler(daemon=True)
 
+    def _run_job():
+        with app.app_context():
+            cancel_expired_orders()
+
+    scheduler.add_job(_run_job, "interval", seconds=60, id="cancel_expired_orders")
+    scheduler.start()
+
+    # Khi app shutdown thì stop scheduler
+    atexit_register(lambda: scheduler.shutdown(wait=False))
+    # ==========================================
     return app
 
 app = create_app()
