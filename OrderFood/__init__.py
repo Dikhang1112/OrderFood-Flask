@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
-    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
+    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("admin@123"),
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "false").lower() == "true"
 
@@ -118,17 +118,42 @@ def create_app():
                 # try: db.session.query(models.OrderItem).delete()
                 # except Exception: pass
 
+                db.session.query(models.Refund).delete()
+
+                # 2️⃣ Xóa Payment (phụ thuộc Order)
+                db.session.query(models.Payment).delete()
+
+                # 3️⃣ Xóa OrderRating và Notification (phụ thuộc Order)
+                db.session.query(models.OrderRating).delete()
+                db.session.query(models.Notification).delete()
+
+                # 4️⃣ Xóa Order (phụ thuộc Cart, Customer, Restaurant)
                 db.session.query(models.Order).delete()
+
+                # 5️⃣ Xóa CartItem trước (phụ thuộc Cart)
                 db.session.query(models.CartItem).delete()
+
+                # 6️⃣ Xóa Cart (phụ thuộc Customer, Restaurant)
                 db.session.query(models.Cart).delete()
 
+                # 7️⃣ Xóa Dish trước (phụ thuộc Category và Restaurant)
                 db.session.query(models.Dish).delete()
+
+                # 8️⃣ Xóa Category (phụ thuộc Restaurant)
                 db.session.query(models.Category).delete()
+
+                # 9️⃣ Xóa Restaurant (phụ thuộc RestaurantOwner, Admin)
                 db.session.query(models.Restaurant).delete()
+
+                # 10️⃣ Xóa các role cụ thể (Customer, RestaurantOwner, Admin) trước User
+                db.session.query(models.Customer).delete()
                 db.session.query(models.RestaurantOwner).delete()
                 db.session.query(models.Admin).delete()
-                db.session.query(models.Customer).delete()
+
+                # 11️⃣ Xóa User cuối cùng
                 db.session.query(models.User).delete()
+
+                # Lưu các thay đổi
                 db.session.commit()
             else:
                 # Giữ nguyên dữ liệu giao dịch & user/customer/restaurant để không mất lịch sử
@@ -247,6 +272,37 @@ def create_app():
                 db.session.add_all(restaurants_to_add)
                 db.session.add_all(categories_to_add)
                 db.session.add_all(dishes_to_add)
+                db.session.commit()
+
+                from datetime import datetime
+                restaurant = models.Restaurant.query.get(6)
+                customers = models.Customer.query.limit(3).all()
+
+                for i, customer in enumerate(customers, start=1):
+                    cart = models.Cart(cus_id=customer.user_id, res_id=restaurant.restaurant_id, status = models.StatusCart.CHECKOUT)
+                    db.session.add(cart)
+                    db.session.flush()
+
+                    dish = models.Dish.query.filter_by(res_id=restaurant.restaurant_id).first()
+                    cart_item = models.CartItem(cart_id=cart.cart_id, dish_id=dish.dish_id, quantity=1)
+                    db.session.add(cart_item)
+                    db.session.flush()
+
+                    status = models.StatusOrder.PAID if i < 3 else models.StatusOrder.COMPLETED
+                    order = models.Order(
+                        customer_id=customer.user_id,
+                        restaurant_id=restaurant.restaurant_id,
+                        cart_id=cart.cart_id,
+                        status=status,
+                        total_price=dish.price,
+                        created_date=datetime.now()
+                    )
+                    db.session.add(order)
+                    db.session.flush()
+
+                    payment = models.Payment(order_id=order.order_id, status=models.StatusPayment.PAID)
+                    db.session.add(payment)
+
                 db.session.commit()
             # nếu đã có dữ liệu: bỏ qua seeding để bảo toàn giao dịch
     scheduler = BackgroundScheduler(daemon=True)

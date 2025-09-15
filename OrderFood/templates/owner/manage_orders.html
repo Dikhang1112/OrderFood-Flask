@@ -1,0 +1,164 @@
+{% extends "layout/base.html" %}
+{% block title %}Quản lý đơn hàng{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Quản lý đơn hàng</h2>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="orderTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending"
+                    type="button" role="tab">
+                Chưa duyệt
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button"
+                    role="tab">
+                Đã duyệt
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button"
+                    role="tab">
+                Đã hủy
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button"
+                    role="tab">
+                Đã hoàn thành
+            </button>
+        </li>
+    </ul>
+
+
+    <!-- Tab contents -->
+    <div class="tab-content mt-3" id="orderTabsContent">
+
+
+        <!-- Chưa duyệt -->
+        <div class="tab-pane fade show active" id="pending" role="tabpanel">
+            {% if pending_orders %}
+            <ul class="list-group">
+                {% for order in pending_orders %}
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                       <span>
+                           Đơn #{{ order.order_id }} - {{ order.customer.user.name }} - {{ order.total_price }} VNĐ
+                       </span>
+                        <button class="btn btn-sm btn-info" data-bs-toggle="collapse"
+                                data-bs-target="#order-detail-{{ order.order_id }}">
+                            Chi tiết
+                        </button>
+                    </div>
+
+
+                    <div id="order-detail-{{ order.order_id }}" class="collapse mt-2">
+                        <p><strong>Khách hàng:</strong> {{ order.customer.user.name }}</p>
+                        <p><strong>Sản phẩm:</strong><br>
+                            {% for item in order.cart.items %}
+                            - {{ item.dish.name }} x {{ item.quantity }}<br>
+                            {% endfor %}
+                        </p>
+                        <p><strong>Tổng tiền:</strong> {{ order.total_price }} VNĐ</p>
+
+
+                        <button type="button" class="btn btn-success btn-sm approve-order-btn "
+                                data-order-id="{{ order.order_id }}">
+                            Duyệt đơn
+                        </button>
+
+
+                        <!-- Hủy đơn -->
+                        <button class="btn btn-danger btn-sm" data-bs-toggle="collapse"
+                                data-bs-target="#cancel-form-{{ order.order_id }}">
+                            Hủy đơn
+                        </button>
+                        <div id="cancel-form-{{ order.order_id }}" class="collapse mt-2">
+                            <form class="cancel-order-form" data-order-id="{{ order.order_id }}">
+                                <div class="mb-2">
+                                   <textarea class="form-control" name="reason" placeholder="Nhập lý do hủy đơn..."
+                                             required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-sm">Xác nhận hủy</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>Không có đơn hàng chưa duyệt.</p>
+            {% endif %}
+        </div>
+
+
+        <!-- Đã duyệt -->
+        <div class="tab-pane fade" id="approved" role="tabpanel">
+            <ul class="list-group">
+                {% if approved_orders %}
+                {% for order in approved_orders %}
+                <li class="list-group-item">
+                    <div>
+                        Đơn #{{ order.order_id }} - {{ order.customer.user.name }} - {{ order.total_price }} VNĐ
+                    </div>
+                    <div style="margin-top: 5px;">
+                        <strong>Sản phẩm:</strong><br>
+                        {% for item in order.cart.items %}
+                        - {{ item.dish.name }} x {{ item.quantity }}<br>
+                        {% endfor %}
+                    </div>
+                    <span class="order-status-badge"><span class="badge bg-info">Đã duyệt</span></span>
+                </li>
+                {% endfor %}
+                {% else %}
+                <!-- JS sẽ append các đơn mới duyệt vào đây -->
+                {% endif %}
+            </ul>
+        </div>
+
+
+        <!-- Đã hủy -->
+        <!-- Đã hủy -->
+        <div class="tab-pane fade" id="cancelled" role="tabpanel">
+            <ul class="list-group">
+                {% if cancelled_orders %}
+                {% for order in cancelled_orders %}
+                <li class="list-group-item">
+                    Đơn #{{ order.order_id }} - {{ order.customer.user.name }} - <span class="text-danger">Đã hủy</span>
+                    <br><small><strong>Lý do:</strong> {{ order.payment.refunds[0].reason if order.payment and order.payment.refunds else "" }}
+</small>
+                </li>
+                {% endfor %}
+                {% else %}
+                <!-- rỗng, JS sẽ append vào đây -->
+                {% endif %}
+            </ul>
+        </div>
+
+
+        <!-- Đã hoàn thành -->
+        <div class="tab-pane fade" id="completed" role="tabpanel">
+            {% if completed_orders %}
+            <ul class="list-group">
+                {% for order in completed_orders %}
+                <li class="list-group-item">
+                    Đơn #{{ order.order_id }} - {{ order.customer.user.name }} - <span
+                        class="text-success">Hoàn thành</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>Không có đơn hàng đã hoàn thành.</p>
+            {% endif %}
+        </div>
+
+
+    </div>
+</div>
+
+
+<script src="{{ url_for('static', filename='js/owner/manageOrder.js') }}"></script>
+
+
+{% endblock %}
