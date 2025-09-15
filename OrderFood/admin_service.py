@@ -5,7 +5,8 @@ from sqlalchemy.orm import joinedload
 from OrderFood import db
 from OrderFood.dao.restaurant_dao import get_all_restaurants, get_restaurant_by_id
 from OrderFood.email_service import send_restaurant_status_email
-from OrderFood.models import StatusRes,Order
+from OrderFood.models import StatusRes, Order, StatusOrder, Customer
+from sqlalchemy.orm import joinedload
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -111,22 +112,23 @@ def approve_restaurant(restaurant_id: int):
 
 @admin_bp.route("/delivery", methods=["GET"])
 def admin_delivery():
-    """Trang danh sách Orders + ô cập nhật waiting_time"""
     if not is_admin(session.get("role")):
         flash("Bạn không có quyền truy cập trang admin", "danger")
         return redirect(url_for("index"))
 
-    orders = (Order.query
-              .options(joinedload(Order.customer), joinedload(Order.restaurant))
-              .order_by(Order.created_date.desc())
-              .all())
-    waiting_time = current_app.config.get("WAITING_TIME", 30)  # mặc định 30 phút
-
-    return render_template(
-        "admin/admin_delivery.html",
-        orders=orders,
-        current_waiting_time=waiting_time
+    orders = (
+        Order.query
+        .options(
+            joinedload(Order.customer).joinedload(Customer.user),
+            joinedload(Order.restaurant)
+        )
+        .order_by(Order.created_date.desc())
+        .all()
     )
+    waiting_time = current_app.config.get("WAITING_TIME", 30)
+    return render_template("admin/admin_delivery.html",
+                           orders=orders,
+                           current_waiting_time=waiting_time)
 
 
 @admin_bp.route("/delivery/set_waiting_time", methods=["POST"])
@@ -143,3 +145,31 @@ def set_waiting_time():
         flash("Waiting time không hợp lệ", "danger")
 
     return redirect(url_for("admin.admin_delivery"))
+
+@admin_bp.route("/delivery/mark_completed/<int:order_id>", methods=["POST"])
+def mark_completed(order_id):
+    """Cập nhật trạng thái order sang COMPLETED và gán delivery_id = admin_id"""
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    order = Order.query.get_or_404(order_id)
+
+    if order.status.value == "ACCEPTED":
+        # Lấy admin_id từ session
+        admin_id = session.get("user_id")   # hoặc session["admin_id"] nếu bạn lưu khác
+
+        if not admin_id:
+            flash("Không xác định được admin đang đăng nhập!", "danger")
+            return redirect(url_for("admin.admin_delivery"))
+
+        order.delivery_id = admin_id
+        order.status = StatusOrder.COMPLETED
+
+        from OrderFood import db
+        db.session.commit()
+        flash(f"Đơn hàng #{order.order_id} đã được giao thành công bởi Admin {admin_id}!", "success")
+    else:
+        flash("Chỉ có thể giao đơn hàng ở trạng thái ACCEPTED", "danger")
+
+    return redirect(url_for("admin.admin_delivery"))
+

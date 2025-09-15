@@ -70,12 +70,12 @@
               Tạo lúc: <strong>{{ order.created_date }}</strong>
             </p>
           </div>
-
+  
         </div>
 
         <div class="mt-4 d-flex gap-2">
-          <a class="btn btn-primary" href="{{ url_for('customer_home') }}">Tiếp tục đặt món</a>
-          <a class="btn btn-outline-secondary" href="{{ url_for('restaurant_detail', restaurant_id=order.restaurant_id) }}">Xem nhà hàng</a>
+          <a class="btn btn-primary" href="{{ url_for('customer.customer_home') }}">Tiếp tục đặt món</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('customer.restaurant_detail', restaurant_id=order.restaurant_id) }}">Xem nhà hàng</a>
         </div>
       </div>
     </div>

@@ -8,7 +8,7 @@
   <h1>OrderFood</h1>
   <p>Chào mừng bạn đến hệ thống đặt món.</p>
   {% if session.get('role') == 'customer' %}
-    <a class="btn btn-light" href="{{ url_for('customer_home') }}">Vào khu khách hàng</a>
+    <a class="btn btn-light" href="{{ url_for('customer.customer_home') }}">Vào khu khách hàng</a>
   {% elif session.get('role') == 'restaurant_owner' %}
     <a class="btn btn-light" href="{{ url_for('owner_home') }}">Vào khu chủ quán</a>
   {% else %}
