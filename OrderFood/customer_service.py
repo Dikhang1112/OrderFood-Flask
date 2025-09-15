@@ -65,20 +65,15 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
+    cart = Cart.query.filter_by(cus_id=customer.user_id, res_id=restaurant_id, status=StatusCart.ACTIVE).first()
+    cart_items = []
+    total_price = 0
 
-    cart = Cart.query.filter_by(
-        cus_id=customer.user_id, is_open=True, res_id=restaurant_id
-    ).first()
-
-    cart_items, total_price = [], 0
     if cart:
         cart_items = cart.items
         total_price = sum(item.quantity * item.dish.price for item in cart_items)
 
-    return render_template(
-        "customer/cart.html",
-        cart=cart, cart_items=cart_items, total_price=total_price
-    )
+    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
 
 
 @customer_bp.route("/orders")

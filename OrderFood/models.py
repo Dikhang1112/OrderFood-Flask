@@ -239,13 +239,7 @@ class Order(db.Model):
     cart = db.relationship("Cart", backref=db.backref("order", uselist=False))
     admin = db.relationship("Admin", backref=db.backref("orders", cascade="all, delete-orphan"))
 
-    @property
-    def expire_time(self):
-        return (self.created_date or datetime.now(timezone.utc)) + timedelta(minutes=self.waiting_time or 0)
 
-    @property
-    def is_expired(self):
-        return datetime.now(timezone.utc) >= self.expire_time
 
 
 class Notification(db.Model):

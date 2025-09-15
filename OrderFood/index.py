@@ -153,9 +153,6 @@ def logout():
     return redirect(url_for("index"))
 
 
-
-
-
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
@@ -315,7 +312,6 @@ def delete_dish(dish_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-
 @app.route("/owner/orders")
 def manage_orders():
     user_id = session.get("user_id")
@@ -346,6 +342,7 @@ def manage_orders():
 
 from flask import jsonify
 
+
 @app.route("/owner/orders/<int:order_id>/approve", methods=["POST"])
 def approve_order(order_id):
     order = Order.query.get_or_404(order_id)
@@ -372,6 +369,7 @@ def approve_order(order_id):
         "total_price": order.total_price,
         "items": [{"name": item.dish.name, "quantity": item.quantity} for item in order.cart.items]
     })
+
 
 @app.route("/owner/orders/<int:order_id>/cancel", methods=["POST"])
 def cancel_order(order_id):
@@ -409,8 +407,6 @@ def cancel_order(order_id):
     })
 
 
-
-
 @app.route('/api/cart', methods=['POST'])
 def add_to_cart():
     data = request.get_json()
@@ -423,20 +419,9 @@ def add_to_cart():
     if not user_id:
         return jsonify({"error": "Bạn chưa đăng nhập"}), 403
 
-    # Kiểm tra role từ session (nhanh) và DB (phòng trường hợp session lệch)
-    role_in_session = (session.get("role") or "").lower()
-    user = User.query.get(user_id)
-    role_in_db = (getattr(user.role, "value", user.role) or "").lower() if user else ""
-
-    if not (role_in_session == "customer" or role_in_db == "customer"):
-        return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-
-    # Đảm bảo có Customer profile
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
-        customer = Customer(user_id=user_id)
-        db.session.add(customer)
-        db.session.commit()
+        return jsonify({"error": "Bạn không phải là khách hàng"}), 403
 
     cart = Cart.query.filter_by(
         cus_id=user_id, res_id=restaurant_id, status=StatusCart.ACTIVE
@@ -460,7 +445,6 @@ def add_to_cart():
     return jsonify({"total_items": total_items})
 
 
-
 @app.route("/cart/<int:restaurant_id>")
 def cart(restaurant_id):
     user_id = session.get("user_id")
@@ -479,11 +463,6 @@ def cart(restaurant_id):
         total_price = sum(item.quantity * item.dish.price for item in cart_items)
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
-
-
-
-
-
 
 
 @app.errorhandler(500)

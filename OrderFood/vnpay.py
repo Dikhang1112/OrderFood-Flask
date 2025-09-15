@@ -50,7 +50,7 @@ def checkout_vnpay(restaurant_id=None):
         abort(400, "Thiếu restaurant_id")
 
     # ===== Tìm cart đang mở =====
-    cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, is_open=True).first()
+    cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, status=StatusCart.ACTIVE).first()
     if not cart or not cart.items:
         flash("Giỏ hàng trống.", "warning")
         return redirect(url_for("admin.restaurant_detail", restaurant_id=rid))
