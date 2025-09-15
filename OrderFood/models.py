@@ -220,7 +220,7 @@ class Order(db.Model):
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey("restaurant.restaurant_id"), nullable=False)
-    cart_id = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False)
+    cart_id = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False, unique=True)
 
     status = db.Column(SAEnum(StatusOrder, name="status_order_enum"), nullable=False, default=StatusOrder.PENDING)
     total_price = db.Column(db.Float, nullable=False)
@@ -284,10 +284,15 @@ class Payment(db.Model):
     __tablename__ = "payment"
 
     payment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    order_id = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
-
+    order_id = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False, unique=True)
+    txn_ref = db.Column(db.String(64), nullable=False, unique=True, index=True)  # VNPay vnp_TxnRef
+    amount = db.Column(db.Integer, nullable=False)  # số tiền gửi sang VNPay (VND * 100)
     status = db.Column(SAEnum(StatusPayment, name="status_payment_enum"),
                        nullable=False, default=StatusPayment.PENDING)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+
 
     order = db.relationship("Order", backref=db.backref("payment", uselist=False))
 

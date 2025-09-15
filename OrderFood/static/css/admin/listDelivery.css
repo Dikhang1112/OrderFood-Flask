@@ -5,23 +5,16 @@
   --err:#ef4444;
 }
 
-/* Table giống restaurant */
+/* ================== TABLE ================== */
 .rs-table {
   width: 100%;
+  table-layout: fixed;       /* bắt buộc để colgroup phát huy hiệu quả */
   border-collapse: separate;
   border-spacing: 0;
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(0,0,0,.06);
-}
-/* Ô nhập thời gian chờ */
-.waiting-input {
-  min-width: 220px;   /* rộng hơn mặc định */
-  max-width: 260px;   /* có giới hạn để không quá dài */
-  border-radius: 8px;
-  border: 1px solid var(--bd);
-  padding: 6px 12px;
 }
 
 .rs-thead {
@@ -44,7 +37,24 @@
   background: #f9fafb;
 }
 
-/* Badge trạng thái */
+/* Đồng nhất padding giữa thead và tbody */
+.rs-table th,
+.rs-table td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* căn phải tiền, căn giữa trạng thái & waiting & giao hàng */
+.rs-table td:nth-child(4) { text-align: right; }   /* Tổng tiền */
+.rs-table th:nth-child(5), .rs-table td:nth-child(5),
+.rs-table th:nth-child(6), .rs-table td:nth-child(6),
+.rs-table th:nth-child(8), .rs-table td:nth-child(8),
+.rs-table th:nth-child(1), .rs-table td:nth-child(1) { text-align: center; }
+
+/* ================== BADGE ================== */
 .rs-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -53,11 +63,19 @@
   font-size: 13px;
   color: #fff;
 }
-.rs-badge--ok { background: var(--ok); }
+.rs-badge--ok   { background: var(--ok); }
 .rs-badge--warn { background: var(--warn); }
-.rs-badge--err { background: var(--err); }
+.rs-badge--err  { background: var(--err); }
 
-/* Form set waiting_time */
+/* ================== FORM & INPUT ================== */
+.waiting-input {
+  min-width: 220px;
+  max-width: 260px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  padding: 6px 12px;
+}
+
 form input[name="waiting_time"] {
   max-width: 160px;
   border-radius: 8px;
@@ -68,4 +86,10 @@ form button {
   border-radius: 8px;
   font-weight: 600;
   padding: 6px 16px;
+}
+
+/* Nút giao hàng gọn */
+.rs-table .btn.btn-success.btn-sm {
+  padding: 4px 10px;
+  line-height: 1.2;
 }

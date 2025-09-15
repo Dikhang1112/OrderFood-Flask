@@ -12,7 +12,7 @@
                 <h1>Create Account</h1>
                 <div class="social-container">
                     <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
-                     <a href="{{ url_for('login_google') }}" class="social" title="Sign in with Google">
+                     <a href="{{ url_for('google_auth.login_google') }}" class="social" title="Sign in with Google">
                         <i class="fa-brands fa-google"></i>
                     </a>
                    <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
@@ -37,7 +37,7 @@
             <form action="{{ url_for('login') }}" method="POST">
                 <h1>Sign in</h1>
                 <div class="social-container">
-                    <a href="{{ url_for('login_google') }}" class="social" title="Sign in with Google">
+                    <a href="{{ url_for('google_auth.login_google') }}" class="social" title="Sign in with Google">
                         <i class="fa-brands fa-google"></i>
                     </a>
 

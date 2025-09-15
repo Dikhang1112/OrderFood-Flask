@@ -47,7 +47,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 
 # ====== Seed/Clear flags ======
-SEED_DB = os.getenv("SEED_DB", "false").lower() == "true"
+SEED_DB = os.getenv("SEED_DB", "false").lower() == "false"
 SEED_CLEAR = os.getenv("SEED_CLEAR", "false").lower() == "true"
 PRESERVE_TRANSACTIONS = os.getenv("PRESERVE_TRANSACTIONS", "true").lower() == "true"  # giữ Order/Payment/Cart
 
@@ -56,6 +56,14 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-please-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
+    from OrderFood.vnpay import vnpay_bp
+    from OrderFood.google_service import google_auth_bp
+    from OrderFood import admin_service
+    from OrderFood.customer_service import customer_bp
+    app.register_blueprint(vnpay_bp)
+    app.register_blueprint(google_auth_bp)
+    app.register_blueprint(admin_service.admin_bp)
+    app.register_blueprint(customer_bp)
 
 
     # Cloudinary (theo .env)
@@ -70,8 +78,8 @@ def create_app():
     mail.init_app(app)
 
     # Admin blueprint + notifications
-    from OrderFood import admin_service
-    app.register_blueprint(admin_service.admin_bp)
+
+
     init_noti(app)
 
     # Google OAuth (OpenID Connect)

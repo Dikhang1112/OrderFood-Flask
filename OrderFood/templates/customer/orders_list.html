@@ -74,7 +74,7 @@
                 </span></td>
                 <td class="text-end">
                   <a class="btn btn-sm btn-outline-primary"
-                     href="{{ url_for('order_track', order_id=od.order_id) }}">
+                     href="{{ url_for('customer.order_track', order_id=od.order_id) }}">
                     Theo dõi
                   </a>
                 </td>
@@ -89,15 +89,15 @@
       <nav class="mt-3">
         <ul class="pagination justify-content-end">
           <li class="page-item {{ 'disabled' if page<=1 }}">
-            <a class="page-link" href="{{ url_for('my_orders', page=page-1, status=status_filter) }}">«</a>
+            <a class="page-link" href="{{ url_for('customer.my_orders', page=page-1, status=status_filter) }}">«</a>
           </li>
           {% for p in range(1, total_pages+1) %}
             <li class="page-item {{ 'active' if p==page }}">
-              <a class="page-link" href="{{ url_for('my_orders', page=p, status=status_filter) }}">{{ p }}</a>
+              <a class="page-link" href="{{ url_for('customer.my_orders', page=p, status=status_filter) }}">{{ p }}</a>
             </li>
           {% endfor %}
           <li class="page-item {{ 'disabled' if page>=total_pages }}">
-            <a class="page-link" href="{{ url_for('my_orders', page=page+1, status=status_filter) }}">»</a>
+            <a class="page-link" href="{{ url_for('customer.my_orders', page=page+1, status=status_filter) }}">»</a>
           </li>
         </ul>
       </nav>

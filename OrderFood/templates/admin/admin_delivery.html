@@ -1,56 +1,70 @@
 {% include "/admin/sidebar.html" %}
 <head>
-  <script src="{{ url_for('static', filename='js/admin/manageDelivery.js') }}"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listDelivery.css') }}"/>
+    <script src="{{ url_for('static', filename='js/admin/manageDelivery.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listDelivery.css') }}"/>
 </head>
 
 <main class="page">
-  <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">Danh sách đơn hàng</h2>
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Danh sách đơn hàng</h2>
 
-  <!-- Góc phải -->
-  <form method="post" action="{{ url_for('admin.set_waiting_time') }}" class="d-flex align-items-center">
-    <label for="waiting_time" class="me-2 fw-bold text-dark">Thời gian chờ (phút):</label>
-    <input type="number" id="waiting_time" name="waiting_time" class="form-control me-2 waiting-input"
-           value="{{ current_waiting_time or '' }}" required />
-    <button class="btn btn-primary">Cập nhật</button>
-  </form>
-</div>
+            <!-- Góc phải -->
+            <form method="post" action="{{ url_for('admin.set_waiting_time') }}" class="d-flex align-items-center">
+                <label for="waiting_time" class="me-2 fw-bold text-dark">Thời gian chờ (phút):</label>
+                <input type="number" id="waiting_time" name="waiting_time" class="form-control me-2 waiting-input"
+                       value="{{ current_waiting_time or '' }}" required/>
+                <button class="btn btn-primary">Cập nhật</button>
+            </form>
+        </div>
 
-    <table class="rs-table table table-hover align-middle">
-      <thead class="rs-thead">
-        <tr class="rs-row-head">
-          <th>ID</th>
-          <th>Khách hàng</th>
-          <th>Nhà hàng</th>
-          <th>Tổng tiền</th>
-          <th>Trạng thái</th>
-          <th>Waiting time</th>
-          <th>Ngày tạo</th>
-        </tr>
-      </thead>
-      <tbody class="rs-body">
-        {% for o in orders %}
-        <tr class="rs-row">
-          <td class="rs-col">#{{ o.order_id }}</td>
-          <td class="rs-col">{{ o.customer.email if o.customer else "—" }}</td>
-          <td class="rs-col">{{ o.restaurant.name if o.restaurant else "—" }}</td>
-          <td class="rs-col">{{ "{:,.0f}".format(o.total_price) }} đ</td>
-          <td class="rs-col">
+        <table class="rs-table table table-hover align-middle">
+            <thead class="rs-thead">
+            <tr class="rs-row-head">
+                <th>ID</th>
+                <th>Khách hàng (Email)</th>
+                <th>Nhà hàng</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Waiting time</th>
+                <th>Ngày tạo</th>
+                <th>Giao hàng</th>
+            </tr>
+            </thead>
+            <tbody class="rs-body">
+            {% for o in orders %}
+            <tr class="rs-row">
+                <td class="rs-col">#{{ o.order_id }}</td>
+                <td class="rs-col">
+                    {{ o.customer.user.email if o.customer and o.customer.user else "—" }}
+                </td>
+                <td class="rs-col">{{ o.restaurant.name if o.restaurant else "—" }}</td>
+                <td class="rs-col">{{ "{:,.0f}".format(o.total_price) }} đ</td>
+                <td class="rs-col">
             <span class="rs-badge rs-badge--{{ 'ok' if o.status.value=='APPROVED'
                                               else 'warn' if o.status.value=='PENDING'
                                               else 'err' }}">
               {{ o.status.value }}
             </span>
-          </td>
-          <td class="rs-col">{{ o.waiting_time }} phút</td>
-          <td class="rs-col">{{ o.created_date.strftime("%d/%m/%Y %H:%M") }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7" class="text-center text-muted py-4">Không có đơn hàng nào.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+                </td>
+                <td class="rs-col">{{ o.waiting_time }} phút</td>
+                <td class="rs-col">{{ o.created_date.strftime("%d/%m/%Y %H:%M") }}</td>
+                <td class="rs-col">
+                    {% if o.status.value == "ACCEPTED" %}
+                    <form method="post" action="{{ url_for('admin.mark_completed', order_id=o.order_id) }}">
+                        <button type="submit" class="btn btn-success btn-sm">Giao hàng</button>
+                    </form>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">Không có đơn hàng nào.</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </main>
