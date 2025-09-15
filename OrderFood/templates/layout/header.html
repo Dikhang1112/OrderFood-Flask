@@ -2,7 +2,7 @@
     <div class="container-fluid">
         <a class="navbar-brand"
            href="{% if session.get('role') == 'RESTAURANT_OWNER' %}
-            {{ url_for('owner_home') }}
+            {{ url_for('owner.home') }}
          {% elif session.get('role') == 'CUSTOMER' %}
             {{ url_for('index') }}
          {% else %}
@@ -22,9 +22,9 @@
                 {% if session.get('role') == 'CUSTOMER' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a></li>
                 {% elif session.get('role') == 'RESTAURANT_OWNER' %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('get_menu') }}">Chỉnh sửa món ăn</a>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('owner.get_menu') }}">Chỉnh sửa món ăn</a>
                 </li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_orders') }}">Quản lý đơn
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('owner.manage_orders') }}">Quản lý đơn
                     hàng</a></li>
                 {% elif session.get('role') == 'admin' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_home') }}">Admin</a></li>
@@ -55,7 +55,7 @@
                         {% if session.get('role') == 'customer' %}
                         <li><a class="dropdown-item" href="{{ url_for('customer.customer_home') }}">Trang khách hàng</a></li>
                         {% elif session.get('role') == 'restaurant_owner' %}
-                        <li><a class="dropdown-item" href="{{ url_for('owner_home') }}">Trang chủ quán</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('owner.home') }}">Trang chủ quán</a></li>
                         {% elif session.get('role') == 'admin' %}
                         <li><a class="dropdown-item" href="{{ url_for('admin_home') }}">Trang admin</a></li>
                         {% endif %}

@@ -10,7 +10,7 @@
   {% if session.get('role') == 'customer' %}
     <a class="btn btn-light" href="{{ url_for('customer.customer_home') }}">Vào khu khách hàng</a>
   {% elif session.get('role') == 'restaurant_owner' %}
-    <a class="btn btn-light" href="{{ url_for('owner_home') }}">Vào khu chủ quán</a>
+    <a class="btn btn-light" href="{{ url_for('owner.home') }}">Vào khu chủ quán</a>
   {% else %}
     <a class="btn btn-light" href="{{ url_for('login') }}">Bắt đầu bằng Đăng ký</a>
   {% endif %}

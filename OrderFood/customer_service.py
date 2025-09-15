@@ -159,3 +159,41 @@ def customer_home():
         })
 
     return render_template("customer_home.html", restaurants=restaurants_with_stars)
+@customer_bp.route('/api/cart', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    dish_id = data.get("dish_id")
+    restaurant_id = data.get("restaurant_id")
+    if not dish_id or not restaurant_id:
+        return jsonify({"error": "Thiếu dữ liệu"}), 400
+
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    customer = Customer.query.filter_by(user_id=user_id).first()
+    if not customer:
+        return jsonify({"error": "Bạn không phải là khách hàng"}), 403
+
+    cart = Cart.query.filter_by(
+        cus_id=user_id, res_id=restaurant_id, status=StatusCart.ACTIVE
+    ).first()
+
+    if not cart:
+        cart = Cart(cus_id=user_id, res_id=restaurant_id, status=StatusCart.ACTIVE)
+        db.session.add(cart)
+        db.session.commit()
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.cart_id, dish_id=dish_id).first()
+    if cart_item:
+        cart_item.quantity += 1
+    else:
+        cart_item = CartItem(cart_id=cart.cart_id, dish_id=dish_id, quantity=1)
+        db.session.add(cart_item)
+
+    db.session.commit()
+
+    total_items = sum(item.quantity for item in cart.items)
+    return jsonify({"total_items": total_items})
+
+
