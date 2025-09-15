@@ -1,7 +1,7 @@
 import hmac
 import hashlib
 import time as pytime                     # ✅ dùng module time
-from datetime import datetime
+from datetime import datetime, timezone
 from secrets import token_urlsafe
 from urllib.parse import urlencode, quote_plus
 
@@ -53,7 +53,7 @@ def checkout_vnpay(restaurant_id=None):
     cart = Cart.query.filter_by(cus_id=user_id, res_id=rid, is_open=True).first()
     if not cart or not cart.items:
         flash("Giỏ hàng trống.", "warning")
-        return redirect(url_for("restaurant_detail", restaurant_id=rid))
+        return redirect(url_for("admin.restaurant_detail", restaurant_id=rid))
 
     # ===== Tính tiền & waiting time =====
     total_price = sum((ci.quantity or 0) * (ci.dish.price or 0) for ci in cart.items)
@@ -85,12 +85,11 @@ def checkout_vnpay(restaurant_id=None):
                 cart_id=cart.cart_id,
                 status=StatusOrder.PENDING,
                 total_price=total_price,
-                created_date=datetime.utcnow(),
                 waiting_time=waiting_time
             )
             db.session.add(order)
             db.session.flush()   # lấy order_id
-            cart.is_open = False   # tuỳ logic, thường đóng cart khi tạo order
+
 
         # ===== Đảm bảo có Payment & làm mới txn_ref =====
         payment = Payment.query.filter_by(order_id=order.order_id).first()

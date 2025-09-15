@@ -19,12 +19,10 @@ from admin_service import is_admin
 from flask_login import login_user, logout_user, current_user, login_required
 import cloudinary.uploader
 
-
 ENUM_UPPERCASE = True  # True nếu DB là 'CUSTOMER','RESTAURANT_OWNER'; False nếu 'customer','restaurant_owner'
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-
 
 
 def norm_role_for_db(role: str) -> str:
@@ -38,12 +36,9 @@ def _role_to_str(r):
     return getattr(r, "value", r)
 
 
-
-
 def is_owner(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "restaurant_owner"
-
 
 
 @app.route("/")
@@ -125,7 +120,6 @@ def register():
     return render_template("auth.html")  # :contentReference[oaicite:3]{index=3}
 
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -157,12 +151,12 @@ def logout():
     flash("Đã đăng xuất", "info")
     return redirect(url_for("index"))
 
+
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
         return redirect(url_for("login"))
     return render_template("owner_home.html")
-
 
 
 @app.route("/owner/menu")
@@ -251,7 +245,6 @@ def edit_dish(dish_id):
         if not dish:
             return jsonify({"success": False, "error": "Món ăn không tồn tại"}), 404
 
-
         name = request.form.get('name')
         note = request.form.get('note')
         price = request.form.get('price')
@@ -299,28 +292,6 @@ def edit_dish(dish_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
     # index.py
-
-
-@app.route("/owner/menu/<int:dish_id>", methods=["DELETE"])
-def delete_dish(dish_id):
-    try:
-        dish = Dish.query.get(dish_id)
-        if not dish:
-            return jsonify({"success": False, "error": "Món ăn không tồn tại"}), 404
-
-        db.session.delete(dish)
-        db.session.commit()
-
-        return jsonify({"success": True, "message": f"Đã xoá món ăn {dish.name}"})
-    except Exception as e:
-        db.session.rollback()
-        print("Lỗi:", e)
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-
-
-
 
 
 @app.route("/owner/menu/<int:dish_id>", methods=["DELETE"])
@@ -388,9 +359,6 @@ def add_to_cart():
 
     total_items = sum(item.quantity for item in cart.items)
     return jsonify({"total_items": total_items})
-
-
-
 
 
 @app.errorhandler(500)

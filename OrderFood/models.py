@@ -1,9 +1,11 @@
 # OrderFood/models.py
 from datetime import timedelta, datetime, timezone
 from enum import Enum
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import Enum as SAEnum, String
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from OrderFood import db
 from flask_login import UserMixin
@@ -229,7 +231,11 @@ class Order(db.Model):
 
     waiting_time = db.Column(db.Integer, nullable=False, default=10)  # đơn vị: phút
 
-    created_date = db.Column(db.DateTime, nullable=False)
+    created_date =  db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
+
 
     customer = db.relationship("Customer", backref=db.backref("orders", cascade="all, delete-orphan"))
     restaurant = db.relationship("Restaurant", backref=db.backref("orders", cascade="all, delete-orphan"))
@@ -238,16 +244,11 @@ class Order(db.Model):
 
     @property
     def expire_time(self):
-        """Trả về mốc thời gian hết hạn (created_date + waiting_time)."""
-        if self.created_date and self.waiting_time:
-            return self.created_date + timedelta(minutes=self.waiting_time)
-        return None
+        return (self.created_date or datetime.now(timezone.utc)) + timedelta(minutes=self.waiting_time or 0)
 
     @property
     def is_expired(self):
-        """Kiểm tra đơn đã hết hạn chưa (dựa theo status + expire_time)."""
-        now = datetime.now(timezone.utc)
-        return self.expire_time is not None and now >= self.expire_time
+        return datetime.now(timezone.utc) >= self.expire_time
 
 
 class Notification(db.Model):
@@ -257,7 +258,10 @@ class Notification(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
 
     message = db.Column(db.String(255), nullable=False)
-    create_at = db.Column(db.DateTime, nullable=False)
+    create_at =  db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
     is_read = db.Column(db.Boolean, default=False)
 
     order = db.relationship("Order", backref=db.backref("notifications", cascade="all, delete-orphan"))
@@ -289,7 +293,10 @@ class Payment(db.Model):
     amount = db.Column(db.Integer, nullable=False)  # số tiền gửi sang VNPay (VND * 100)
     status = db.Column(SAEnum(StatusPayment, name="status_payment_enum"),
                        nullable=False, default=StatusPayment.PENDING)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at =  db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
 
 
 
@@ -310,7 +317,10 @@ class Refund(db.Model):
     # dùng lại Role (CUSTOMER / RESTAURANT_OWNER / ADMIN)
     requested_by = db.Column(SAEnum(Role, name="request_by_enum"), nullable=False)
 
-    created_at = db.Column(db.DateTime, nullable=False)
+    created_at =  db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
     completed_at = db.Column(db.DateTime)
 
     payment = db.relationship("Payment", backref=db.backref("refunds", cascade="all, delete-orphan"))
