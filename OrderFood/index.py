@@ -8,6 +8,7 @@ from flask import (
     render_template, request, redirect, url_for, flash, session, jsonify,
     current_app, abort
 )
+from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from OrderFood import app, dao_index, oauth
@@ -191,11 +192,14 @@ def restaurant_detail(restaurant_id):
     cart_items_count = 0
     user_id = session.get("user_id")
     if user_id:
-        cart = (
-            Cart.query.options(joinedload(Cart.items))
-            .filter_by(cus_id=user_id, res_id=res.restaurant_id)
-            .first()
-        )
+        from sqlalchemy import or_
+
+        cart = Cart.query.filter(
+            Cart.cus_id == user_id,
+            Cart.res_id == res.restaurant_id,
+            or_(Cart.status == StatusCart.ACTIVE, Cart.status == StatusCart.SAVED)
+        ).first()
+
         if cart and cart.items:
             cart_items_count = sum(item.quantity or 0 for item in cart.items)
 
@@ -596,8 +600,8 @@ def checkout_vnpay(restaurant_id=None):
     if not rid:
         # fallback: nếu user chỉ có 1 giỏ mở thì dùng luôn
         active_carts = Cart.query.filter_by(cus_id=user_id, status=StatusCart.ACTIVE).all()
-        if len(open_carts) == 1:
-            rid = open_carts[0].res_id
+        if len(active_carts) == 1:
+            rid = active_carts[0].res_id
     if not rid:
         abort(400, "Thiếu restaurant_id")
 

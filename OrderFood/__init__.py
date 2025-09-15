@@ -271,7 +271,7 @@ def create_app():
                 customers = models.Customer.query.limit(3).all()
 
                 for i, customer in enumerate(customers, start=1):
-                    cart = models.Cart(cus_id=customer.user_id, res_id=restaurant.restaurant_id)
+                    cart = models.Cart(cus_id=customer.user_id, res_id=restaurant.restaurant_id, status = models.StatusCart.CHECKOUT)
                     db.session.add(cart)
                     db.session.flush()
 
