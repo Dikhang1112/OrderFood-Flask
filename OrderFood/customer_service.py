@@ -7,7 +7,7 @@ from OrderFood import db, dao_index
 from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
-    Order, StatusOrder
+    Order, StatusOrder, StatusCart
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -35,22 +35,25 @@ def restaurant_detail(restaurant_id):
     cart_items_count = 0
     user_id = session.get("user_id")
     if user_id:
-        cart = (
-            Cart.query.options(joinedload(Cart.items))
-            .filter_by(cus_id=user_id, res_id=res.restaurant_id)
-            .first()
-        )
+        from sqlalchemy import or_
+
+        cart = Cart.query.filter(
+            Cart.cus_id == user_id,
+            Cart.res_id == res.restaurant_id,
+            or_(Cart.status == StatusCart.ACTIVE, Cart.status == StatusCart.SAVED)
+        ).first()
+
         if cart and cart.items:
             cart_items_count = sum(item.quantity or 0 for item in cart.items)
 
     return render_template(
-        "customer/restaurant_detail.html",
+        "/customer/restaurant_detail.html",
         res=res,
         dishes=dishes,
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-    )
+    )  # :contentReference[oaicite:4]{index=4}
 
 
 @customer_bp.route("/cart/<int:restaurant_id>")
