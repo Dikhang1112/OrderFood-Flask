@@ -3,7 +3,7 @@ name: CI/CD Flask Docker (Dev)
 on:
   push:
     branches:
-      - develop
+      - cicd
 
 jobs:
   build-test:
