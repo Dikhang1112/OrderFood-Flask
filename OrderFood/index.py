@@ -1,3 +1,4 @@
+import os
 import traceback
 from secrets import token_urlsafe
 
@@ -472,4 +473,7 @@ def internal_error(error):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("FLASK_DEBUG", "0") == "1"
+    # quan trọng: host = "0.0.0.0" để container expose ra ngoài
+    app.run(host="0.0.0.0", port=port, debug=debug)
