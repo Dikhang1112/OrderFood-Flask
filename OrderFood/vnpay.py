@@ -60,7 +60,7 @@ def checkout_vnpay(restaurant_id=None):
     if total_price <= 0:
         flash("Tổng tiền không hợp lệ.", "danger")
         return redirect(url_for("cart", restaurant_id=rid))
-    waiting_time = current_app.config.get("WAITING_TIME", 30)
+    waiting_time = current_app.config.get("WAITING_TIME", 1)
     amount_vnp = int(total_price) * 100  # VNPay cần VND x 100
 
     try:

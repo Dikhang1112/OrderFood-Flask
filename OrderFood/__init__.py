@@ -11,8 +11,7 @@ import cloudinary
 
 from OrderFood.helper.NotiHelper import init_app as init_noti
 from apscheduler.schedulers.background import BackgroundScheduler
-from atexit import register as atexit_register
-from OrderFood.jobs import cancel_expired_orders
+
 
 # ================== Load .env ==================
 load_dotenv()
@@ -21,6 +20,8 @@ load_dotenv()
 db = SQLAlchemy()
 mail = Mail()
 oauth = OAuth()
+scheduler = BackgroundScheduler(timezone="Asia/Ho_Chi_Minh", daemon=True)
+_SCHEDULER_STARTED = False  # chống start 2 lần
 
 # ================== ENV & defaults ==================
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
@@ -248,18 +249,31 @@ def create_app():
                 db.session.add_all(dishes_to_add)
                 db.session.commit()
             # nếu đã có dữ liệu: bỏ qua seeding để bảo toàn giao dịch
-    scheduler = BackgroundScheduler(daemon=True)
+        # ---- START SCHEDULER (1 lần, có app context) ----
+        global _SCHEDULER_STARTED, scheduler
+        should_start = (not app.debug) or (os.environ.get("WERKZEUG_RUN_MAIN") == "true")
+        if (not _SCHEDULER_STARTED) and should_start:
+            from OrderFood.jobs import cancel_expired_orders  # import TRONG hàm, tránh circular
 
-    def _run_job():
-        with app.app_context():
-            cancel_expired_orders()
+            def _run_job():
+                # Bắt buộc: app context để dùng db/session, config...
+                with app.app_context():
+                    cancel_expired_orders()
 
-    scheduler.add_job(_run_job, "interval", seconds=60, id="cancel_expired_orders")
-    scheduler.start()
+            scheduler.add_job(
+                _run_job,
+                "interval",
+                minutes=1,
+                id="cancel_expired_orders",
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+            )
+            scheduler.start()
+            _SCHEDULER_STARTED = True
+            print("[SCHED] started")
+        # ---- END SCHEDULER ----
 
-    # Khi app shutdown thì stop scheduler
-    atexit_register(lambda: scheduler.shutdown(wait=False))
-    # ==========================================
     return app
 
 app = create_app()

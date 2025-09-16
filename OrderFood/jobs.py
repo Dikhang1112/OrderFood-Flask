@@ -1,12 +1,29 @@
+# OrderFood/jobs.py
+from sqlalchemy import func, text
+from OrderFood.models import Order, StatusOrder, Role
+
+
 def cancel_expired_orders():
     from OrderFood import db
-    from OrderFood.models import Order, StatusOrder
+    expired = (
+        Order.query
+        .filter(Order.status == StatusOrder.PAID)
+        .filter(
+            func.timestampdiff(
+                text('SECOND'),
+                Order.created_date,
+                func.now()            # <--- dùng NOW() thay vì UTC_TIMESTAMP()
+            ) >= (Order.waiting_time * 60)
+        )
+        .all()
+    )
+    for o in expired:
+        print(f"[CANCEL] order #{o.order_id} quá hạn {o.waiting_time} phút")
+        o.status = StatusOrder.CANCELED
+        o.canceled_by = Role.RESTAURANT_OWNER
 
-    expired_orders = Order.query.filter(Order.status == StatusOrder.PAID).all()
-
-    for o in expired_orders:
-        if o.is_expired:
-            o.status = StatusOrder.CANCELED
-            print(f"Hủy order #{o.order_id}, hết hạn lúc {o.expire_time}")
-
-    db.session.commit()
+    if expired:
+        db.session.commit()
+        print(f"Đã hủy {len(expired)} đơn quá hạn.")
+    else:
+        print("Không có đơn quá hạn.")

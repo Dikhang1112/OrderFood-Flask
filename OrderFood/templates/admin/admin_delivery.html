@@ -29,6 +29,7 @@
                 <th>Waiting time</th>
                 <th>Ngày tạo</th>
                 <th>Giao hàng</th>
+                <th>Hủy</th>
             </tr>
             </thead>
             <tbody class="rs-body">
@@ -53,6 +54,15 @@
                     {% if o.status.value == "ACCEPTED" %}
                     <form method="post" action="{{ url_for('admin.mark_completed', order_id=o.order_id) }}">
                         <button type="submit" class="btn btn-success btn-sm">Giao hàng</button>
+                    </form>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="rs-col">
+                    {% if o.status.value in "PAID" %}
+                    <form method="post" action="{{ url_for('admin.cancel_order', order_id=o.order_id) }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Hủy</button>
                     </form>
                     {% else %}
                     —

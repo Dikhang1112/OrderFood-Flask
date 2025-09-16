@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from OrderFood import db
 from OrderFood.dao.restaurant_dao import get_all_restaurants, get_restaurant_by_id
 from OrderFood.email_service import send_restaurant_status_email
-from OrderFood.models import StatusRes, Order, StatusOrder, Customer
+from OrderFood.models import StatusRes, Order, StatusOrder, Customer, Role
 from sqlalchemy.orm import joinedload
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -125,7 +125,7 @@ def admin_delivery():
         .order_by(Order.created_date.desc())
         .all()
     )
-    waiting_time = current_app.config.get("WAITING_TIME", 30)
+    waiting_time = current_app.config.get("WAITING_TIME", 10)
     return render_template("admin/admin_delivery.html",
                            orders=orders,
                            current_waiting_time=waiting_time)
@@ -170,6 +170,29 @@ def mark_completed(order_id):
         flash(f"Đơn hàng #{order.order_id} đã được giao thành công bởi Admin {admin_id}!", "success")
     else:
         flash("Chỉ có thể giao đơn hàng ở trạng thái ACCEPTED", "danger")
+
+    return redirect(url_for("admin.admin_delivery"))
+
+@admin_bp.route("/cancel/<int:order_id>", methods=["POST"])
+def cancel_order(order_id: int):
+    """
+     khi admin nhấn hủy -> canceled_by = CUSTOMER.
+    """
+    # kiểm tra quyền
+    role = session.get("role")
+    if not role or str(getattr(role, "value", role)).lower() != "admin":
+        return jsonify({"error": "forbidden"}), 403
+
+    order = Order.query.get_or_404(order_id)
+
+    # chỉ cho hủy khi đơn chưa hoàn tất/đã hủy
+    if order.status in (StatusOrder.PENDING, StatusOrder.ACCEPTED, StatusOrder.PAID):
+        order.status = StatusOrder.CANCELED
+        order.canceled_by = Role.CUSTOMER   # ✅ theo yêu cầu
+        db.session.commit()
+        flash(f"Đã hủy đơn hàng #{order.order_id}.", "success")
+    else:
+        flash("Chỉ có thể hủy đơn ở trạng thái PENDING/ACCEPTED/PAID.", "warning")
 
     return redirect(url_for("admin.admin_delivery"))
 

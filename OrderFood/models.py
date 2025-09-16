@@ -214,7 +214,7 @@ class CartItem(db.Model):
 # ORDER + NOTIFICATION + RATING
 # =========================
 class Order(db.Model):
-    __tablename__ = "order"  # cân nhắc đổi thành "orders" để tránh xung đột keyword
+    __tablename__ = "order"
 
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=False)
@@ -232,12 +232,30 @@ class Order(db.Model):
         db.DateTime,
         default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
     )
+    canceled_by = db.Column(SAEnum(Role, name="order_canceled_by_enum"), nullable=True)
 
 
     customer = db.relationship("Customer", backref=db.backref("orders", cascade="all, delete-orphan"))
     restaurant = db.relationship("Restaurant", backref=db.backref("orders", cascade="all, delete-orphan"))
     cart = db.relationship("Cart", backref=db.backref("order", uselist=False))
     admin = db.relationship("Admin", backref=db.backref("orders", cascade="all, delete-orphan"))
+
+    @property
+    def expire_time(self):
+        """Thời điểm hết hạn = created_date + waiting_time (phút), UTC-aware."""
+        cdt = self.created_date
+        if not cdt:
+            return None
+        if cdt.tzinfo is None:
+            cdt = cdt.replace(tzinfo=timezone.utc)
+        return cdt + timedelta(minutes=int(self.waiting_time or 0))
+
+    @property
+    def is_expired(self):
+        et = self.expire_time
+        if not et:
+            return False
+        return datetime.now(timezone.utc) >= et
 
 
 
@@ -305,8 +323,7 @@ class Refund(db.Model):
                        nullable=False, default=StatusRefund.REQUESTED)
     reason = db.Column(db.String(255))
 
-    # dùng lại Role (CUSTOMER / RESTAURANT_OWNER / ADMIN)
-    requested_by = db.Column(SAEnum(Role, name="request_by_enum"), nullable=False)
+
 
     created_at =  db.Column(
         db.DateTime,
