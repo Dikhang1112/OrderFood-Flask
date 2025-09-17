@@ -31,33 +31,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Create .env from secret
+      - name: Create .env from secret (override for CI)
         run: |
           echo "${{ secrets.ENV_FILE }}" > .env
-          # ép cấu hình cho CI:
           echo "SQLALCHEMY_DATABASE_URI=sqlite:///ci_test.db" >> .env
           echo "FLASK_DEBUG=0" >> .env
           echo "PORT=5000" >> .env
 
       - name: Run app (background) & early diagnostics
         env:
-          # nếu dùng Flask CLI thì cũng không sao; ta chạy trực tiếp index.py
           PYTHONUNBUFFERED: "1"
         run: |
-          nohup python OrderFood/index.py > app.log 2>&1 &
+          # chạy dưới dạng module để Python nhận package OrderFood
+          nohup python -m OrderFood.index > app.log 2>&1 &
           echo $! > app.pid
           sleep 3
-          echo "=== ps ==="
-          ps -ef | grep -i "python OrderFood/index.py" | grep -v grep || true
-          echo "=== first 200 lines of app.log ==="
-          sed -n '1,200p' app.log || true
-          echo "=== listening ports (ss) ==="
+          echo "=== first logs ==="
+          sed -n '1,120p' app.log || true
+          echo "=== listening ports ==="
           ss -ltnp || true
 
       - name: Wait for port & smoke test
         run: |
-          # đợi tối đa ~120s
-          for i in {1..60}; do
+          for i in {1..20}; do
             if ss -ltn | grep -q ":5000"; then
               echo "Port 5000 is listening."
               break
@@ -66,9 +62,10 @@ jobs:
             sleep 2
           done
 
-          # thử gọi HTTP / (đổi path nếu trang chủ không phải '/')
+          # nếu trang chủ của anh không phải '/', đổi URL tại đây
+          TARGET_URL="http://127.0.0.1:5000/"
           for i in {1..15}; do
-            if curl -fsS http://127.0.0.1:5000 > /dev/null; then
+            if curl -fsS "$TARGET_URL" > /dev/null; then
               echo "Smoke test OK"
               exit 0
             fi
