@@ -1,53 +1,77 @@
-name: CI/CD Flask Docker (Dev)
+name: CI/CD Flask (Dev - no Docker)
 
 on:
   push:
-    branches: [ cicd ]   # chạy khi push lên nhánh cicd
+    branches: [ cicd ]   # chỉ chạy khi push lên nhánh cicd
 
 jobs:
-  build_test_push:
+  build_and_smoke_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create .env from secret
-        run: echo "${{ secrets.ENV_FILE }}" > .env
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      # Build image dev để smoke-test
-      - name: Build dev image
-        run: docker build -t app-dev:latest .
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      # Chạy container và smoke-test HTTP /
-      - name: Run container (smoke test)
+      - name: Install deps
         run: |
-          docker run -d --name app -p 5000:5000 --env-file .env app-dev:latest
-          for i in {1..20}; do
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env from secret
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+          # Dùng SQLite để không cần MySQL khi chạy CI
+          echo "SQLALCHEMY_DATABASE_URI=sqlite:///ci_test.db" >> .env
+          # Tắt debug để log gọn, đặt PORT cố định
+          echo "FLASK_DEBUG=0" >> .env
+          echo "PORT=5000" >> .env
+
+      # Start app & smoke test
+      - name: Run Flask app (background) and smoke test
+        env:
+          # nếu app dùng FLASK_APP/CLI thì giữ, còn không thì ignore
+          FLASK_APP: OrderFood/index.py
+        run: |
+          # chạy app nền bằng python entrypoint
+          nohup python OrderFood/index.py > app.log 2>&1 &
+          echo $! > app.pid
+
+          # đợi app lên
+          for i in {1..30}; do
             if curl -fsS http://127.0.0.1:5000 > /dev/null; then
               echo "Smoke test OK"
-              exit 0
+              break
             fi
             echo "Waiting app... ($i)"
             sleep 2
           done
-          echo "Smoke test FAILED"
-          docker logs app
-          exit 1
 
-      # Login trước rồi mới build-push
-      - name: Login to Docker Hub
-        if: success()
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          # nếu chưa OK thì fail và in log
+          if ! curl -fsS http://127.0.0.1:5000 > /dev/null; then
+            echo "Smoke test FAILED"
+            echo "===== app.log ====="
+            tail -n 200 app.log || true
+            exit 1
+          fi
 
-      - name: Build & Push image (latest)
-        if: success()
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/orderfood-flask:latest
+      - name: Show last logs
+        if: always()
+        run: |
+          echo "===== tail app.log ====="
+          tail -n 100 app.log || true
+          # dừng app
+          if [ -f app.pid ]; then kill $(cat app.pid) || true; fi
