@@ -2,12 +2,12 @@ name: CI/CD Flask (Dev - no Docker)
 
 on:
   push:
-    branches: [ cicd ]   # chỉ chạy khi push lên nhánh cicd
+    branches: [ cicd ]
 
 jobs:
   build_and_smoke_test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -34,44 +34,63 @@ jobs:
       - name: Create .env from secret
         run: |
           echo "${{ secrets.ENV_FILE }}" > .env
-          # Dùng SQLite để không cần MySQL khi chạy CI
+          # ép cấu hình cho CI:
           echo "SQLALCHEMY_DATABASE_URI=sqlite:///ci_test.db" >> .env
-          # Tắt debug để log gọn, đặt PORT cố định
           echo "FLASK_DEBUG=0" >> .env
           echo "PORT=5000" >> .env
 
-      # Start app & smoke test
-      - name: Run Flask app (background) and smoke test
+      - name: Run app (background) & early diagnostics
         env:
-          # nếu app dùng FLASK_APP/CLI thì giữ, còn không thì ignore
-          FLASK_APP: OrderFood/index.py
+          # nếu dùng Flask CLI thì cũng không sao; ta chạy trực tiếp index.py
+          PYTHONUNBUFFERED: "1"
         run: |
-          # chạy app nền bằng python entrypoint
           nohup python OrderFood/index.py > app.log 2>&1 &
           echo $! > app.pid
+          sleep 3
+          echo "=== ps ==="
+          ps -ef | grep -i "python OrderFood/index.py" | grep -v grep || true
+          echo "=== first 200 lines of app.log ==="
+          sed -n '1,200p' app.log || true
+          echo "=== listening ports (ss) ==="
+          ss -ltnp || true
 
-          # đợi app lên
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:5000 > /dev/null; then
-              echo "Smoke test OK"
+      - name: Wait for port & smoke test
+        run: |
+          # đợi tối đa ~120s
+          for i in {1..60}; do
+            if ss -ltn | grep -q ":5000"; then
+              echo "Port 5000 is listening."
               break
             fi
-            echo "Waiting app... ($i)"
+            echo "Waiting for port 5000... ($i)"
             sleep 2
           done
 
-          # nếu chưa OK thì fail và in log
-          if ! curl -fsS http://127.0.0.1:5000 > /dev/null; then
-            echo "Smoke test FAILED"
-            echo "===== app.log ====="
-            tail -n 200 app.log || true
-            exit 1
-          fi
+          # thử gọi HTTP / (đổi path nếu trang chủ không phải '/')
+          for i in {1..15}; do
+            if curl -fsS http://127.0.0.1:5000 > /dev/null; then
+              echo "Smoke test OK"
+              exit 0
+            fi
+            echo "Waiting app HTTP... ($i)"
+            sleep 2
+          done
 
-      - name: Show last logs
+          echo "Smoke test FAILED"
+          echo "===== tail app.log ====="
+          tail -n 300 app.log || true
+          exit 1
+
+      - name: Stop app & show last logs
         if: always()
         run: |
-          echo "===== tail app.log ====="
-          tail -n 100 app.log || true
-          # dừng app
           if [ -f app.pid ]; then kill $(cat app.pid) || true; fi
+          echo "===== final tail app.log ====="
+          tail -n 200 app.log || true
+
+      - name: Upload app.log artifact (for debugging)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-log
+          path: app.log
