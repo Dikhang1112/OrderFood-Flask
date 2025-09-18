@@ -96,7 +96,6 @@
         {% endfor %}
     </div>
 
-    {# Phân trang: chỉ hiển thị khi controller có truyền total/per_page/page #}
     {% if total is defined and per_page is defined and page is defined %}
     {% set total_pages = (total // per_page) + (1 if total % per_page else 0) %}
     <nav aria-label="Page navigation" class="mt-3">

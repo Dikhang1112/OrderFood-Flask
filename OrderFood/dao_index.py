@@ -19,30 +19,19 @@ def create_user(name, email, phone, hashed_password, role: str):
     try:
         db.session.add(u)
         db.session.commit()
+        if role.upper() == "RESTAURANT_OWNER":
+            owner = RestaurantOwner(user_id=u.user_id, tax=None)  # tax để None, sẽ update sau
+            db.session.add(owner)
+
+        db.session.commit()
         return u
     except IntegrityError:
         db.session.rollback()
         return None
 
-ENUM_UPPERCASE = True  # True nếu DB dùng 'CUSTOMER','RESTAURANT_OWNER'
-
-def _norm_role(role: str) -> str:
-    r = (role or "customer").strip().lower()
-    return "CUSTOMER" if (ENUM_UPPERCASE and r == "customer") else \
-           "RESTAURANT_OWNER" if ENUM_UPPERCASE else r
-
-def get_user_by_email(email: str):
-    return User.query.filter(User.email == email).first()
 
 def get_user_by_id(user_id):
     return User.query.get(user_id)
-
-
-def create_user(name, email, phone, hashed_password, role: str):
-    u = User(name=name, email=email, phone=phone, password=hashed_password, role=role)
-    db.session.add(u)
-    db.session.commit()
-    return u
 
 def load_menu_owner(owner_id: int):
     owner = RestaurantOwner.query.get(owner_id)

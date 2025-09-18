@@ -1,0 +1,42 @@
+{% extends "layout/base.html" %}
+{% block title %}Đăng ký nhà hàng{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Đăng ký nhà hàng</h2>
+    <form id="resRegisterForm" enctype="multipart/form-data">
+        <!-- Tên nhà hàng -->
+        <div class="mb-3">
+            <label for="name" class="form-label">Tên nhà hàng</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <!-- Địa chỉ -->
+        <div class="mb-3">
+            <label for="address" class="form-label">Địa chỉ</label>
+            <input type="text" class="form-control" id="address" name="address" required>
+        </div>
+        <!-- Giờ mở cửa -->
+        <div class="mb-3">
+            <label for="open_hour" class="form-label">Giờ mở cửa</label>
+            <input type="time" class="form-control" id="open_hour" name="open_hour" required>
+        </div>
+        <!-- Giờ đóng cửa -->
+        <div class="mb-3">
+            <label for="close_hour" class="form-label">Giờ đóng cửa</label>
+            <input type="time" class="form-control" id="close_hour" name="close_hour" required>
+        </div>
+        <!-- Mã số thuế -->
+        <div class="mb-3">
+            <label for="tax" class="form-label">Mã số thuế</label>
+            <input type="text" class="form-control" id="tax" name="tax" required>
+        </div>
+        <!-- Ảnh -->
+        <div class="mb-3">
+            <label for="image" class="form-label">Ảnh nhà hàng</label>
+            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+        </div>
+        <button type="submit" class="btn btn-primary">Đăng ký</button>
+    </form>
+</div>
+<script src="{{ url_for('static', filename='js/owner/res_resgister.js') }}"></script>
+
+{% endblock %}
