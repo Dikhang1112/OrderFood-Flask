@@ -111,7 +111,7 @@ def notifications_feed():
     for n in items:
         if role == "restaurant_owner":
             # sửa: dùng đúng endpoint của owner
-            target_url = url_for("owner.manage_orders")
+            target_url = url_for("manage_orders")
         else:
             target_url = url_for("customer.order_track", order_id=n.order_id)
 

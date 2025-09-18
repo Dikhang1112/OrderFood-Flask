@@ -122,17 +122,28 @@
         <!-- Đã hủy -->
         <div class="tab-pane fade" id="cancelled" role="tabpanel">
             <ul class="list-group">
-                {% if cancelled_orders %}
                 {% for order in cancelled_orders %}
+                {% set by = (order.canceled_by.value if order.canceled_by is not none else (order.canceled_by or '')) %}
+                {% set by = by|string|lower %}
+
                 <li class="list-group-item">
-                    Đơn #{{ order.order_id }} - {{ order.customer.user.name }} - <span class="text-danger">Đã hủy</span>
-                    <br><small><strong>Lý do:</strong> {{ order.payment.refunds[0].reason if order.payment and order.payment.refunds else "" }}
-</small>
+                    Đơn #{{ order.order_id }} - {{ order.customer.user.name }} -
+                    <span class="text-danger">Đã hủy</span>
+                    <br>
+                    <small>
+                        <strong>Lý do:</strong>
+                        {% if by == 'restaurant_owner' %}
+                        Quá thời gian xác nhận đơn
+                        {% elif by == 'customer' %}
+                        Khách hàng đã hủy đơn
+                        {% elif order.payment and order.payment.refunds %}
+                        {{ order.payment.refunds[0].reason }}
+                        {% else %}
+                        Không rõ lý do
+                        {% endif %}
+                    </small>
                 </li>
                 {% endfor %}
-                {% else %}
-                <!-- rỗng, JS sẽ append vào đây -->
-                {% endif %}
             </ul>
         </div>
 
