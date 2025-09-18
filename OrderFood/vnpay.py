@@ -15,6 +15,7 @@ from OrderFood.models import (
     Order, Cart, Payment,
     StatusOrder, StatusPayment, StatusCart
 )
+from OrderFood.notifications import push_owner_noti_on_paid
 
 vnpay_bp = Blueprint("vnpay", __name__)
 
@@ -141,12 +142,13 @@ def checkout_vnpay(restaurant_id=None):
 @vnpay_bp.route("/vnpay_return")
 def vnpay_return():
     """Return URL: cập nhật trạng thái khi người dùng quay lại site."""
-    data = dict(request.args)
-    received_hash = data.get("vnp_SecureHash", "")
-    calc_hash = _vnp_sign(data)
+    # Loại vnp_SecureHash khỏi params để tính chữ ký
+    params = {k: v for k, v in request.args.items() if k != "vnp_SecureHash"}
+    received_hash = request.args.get("vnp_SecureHash", "")
+    calc_hash = _vnp_sign(params)
     valid = hmac.compare_digest(received_hash, calc_hash)
 
-    txn_ref = data.get("vnp_TxnRef", "")
+    txn_ref = params.get("vnp_TxnRef", "")
     payment = Payment.query.filter_by(txn_ref=txn_ref).first()   # ✅ tra theo txn_ref
     if not payment:
         flash("Không tìm thấy giao dịch.", "danger")
@@ -154,17 +156,39 @@ def vnpay_return():
 
     order = Order.query.get_or_404(payment.order_id)
 
-    if valid and data.get("vnp_ResponseCode") == "00":
-        order.status = StatusOrder.PAID
-        payment.status = StatusPayment.PAID
+    # (khuyến nghị) kiểm tra số tiền
+    try:
+        vnp_amount = int(params.get("vnp_Amount", "0"))
+    except ValueError:
+        vnp_amount = 0
+    if vnp_amount and vnp_amount != int(payment.amount):
+        flash("Số tiền giao dịch không khớp.", "danger")
+        return redirect(url_for("index"))
+
+    if valid and params.get("vnp_ResponseCode") == "00":
+        just_marked = False
+        if payment.status != StatusPayment.PAID:
+            payment.status = StatusPayment.PAID
+            just_marked = True
+        if order.status != StatusOrder.PAID:
+            order.status = StatusOrder.PAID
+            just_marked = True
+
         if order.cart:
             order.cart.is_open = False
             order.cart.status = StatusCart.CHECKOUT
+
         db.session.commit()
+
+        # chỉ push noti khi thực sự vừa chuyển sang PAID
+        if just_marked:
+            push_owner_noti_on_paid(order)
+
         flash("Thanh toán thành công.", "success")
     else:
-        payment.status = StatusPayment.FAILED
-        db.session.commit()
+        if payment.status != StatusPayment.PENDING:
+            payment.status = StatusPayment.PENDING
+            db.session.commit()
         flash("Thanh toán chưa thành công hoặc không hợp lệ.", "warning")
 
     return redirect(url_for("customer.order_track", order_id=order.order_id))
@@ -172,13 +196,13 @@ def vnpay_return():
 @vnpay_bp.route("/vnpay_ipn")
 def vnpay_ipn():
     """IPN: VNPay gọi về để xác nhận giao dịch (server-to-server)."""
-    data = dict(request.args)
-    received_hash = data.get("vnp_SecureHash", "")
-    calc_hash = _vnp_sign(data)
+    params = {k: v for k, v in request.args.items() if k != "vnp_SecureHash"}
+    received_hash = request.args.get("vnp_SecureHash", "")
+    calc_hash = _vnp_sign(params)
     if not hmac.compare_digest(received_hash, calc_hash):
         return jsonify({"RspCode": "97", "Message": "Invalid signature"})
 
-    txn_ref = data.get("vnp_TxnRef", "")
+    txn_ref = params.get("vnp_TxnRef", "")
     payment = Payment.query.filter_by(txn_ref=txn_ref).first()
     if not payment:
         return jsonify({"RspCode": "01", "Message": "Payment not found"})
@@ -187,15 +211,36 @@ def vnpay_ipn():
     if not order:
         return jsonify({"RspCode": "01", "Message": "Order not found"})
 
-    if data.get("vnp_ResponseCode") == "00":
-        order.status = StatusOrder.PAID
-        payment.status = StatusPayment.PAID
+    # (khuyến nghị) kiểm tra số tiền
+    try:
+        vnp_amount = int(params.get("vnp_Amount", "0"))
+    except ValueError:
+        vnp_amount = 0
+    if vnp_amount and vnp_amount != int(payment.amount):
+        return jsonify({"RspCode": "04", "Message": "Invalid amount"})
+
+    if params.get("vnp_ResponseCode") == "00":
+        just_marked = False
+        if payment.status != StatusPayment.PAID:
+            payment.status = StatusPayment.PAID
+            just_marked = True
+        if order.status != StatusOrder.PAID:
+            order.status = StatusOrder.PAID
+            just_marked = True
+
         if order.cart:
             order.cart.is_open = False
             order.cart.status = StatusCart.CHECKOUT
+
         db.session.commit()
+
+        # đẩy noti cho owner nếu lần đầu thành PAID (phòng TH user không quay lại return)
+        if just_marked:
+            push_owner_noti_on_paid(order)
+
         return jsonify({"RspCode": "00", "Message": "Confirm Success"})
     else:
-        payment.status = StatusPayment.FAILED
-        db.session.commit()
+        if payment.status != StatusPayment.PENDING:
+            payment.status = StatusPayment.PENDING
+            db.session.commit()
         return jsonify({"RspCode": "00", "Message": "Confirm Received"})

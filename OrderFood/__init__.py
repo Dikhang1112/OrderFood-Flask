@@ -61,6 +61,8 @@ def create_app():
     from OrderFood.google_service import google_auth_bp
     from OrderFood import admin_service
     from OrderFood.customer_service import customer_bp
+    from OrderFood.notifications import noti_bp
+    app.register_blueprint(noti_bp)
     app.register_blueprint(vnpay_bp)
     app.register_blueprint(google_auth_bp)
     app.register_blueprint(admin_service.admin_bp)

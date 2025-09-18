@@ -266,15 +266,21 @@ class Notification(db.Model):
     noti_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     order_id = db.Column(db.Integer, db.ForeignKey("order.order_id"), nullable=False)
 
-    message = db.Column(db.String(255), nullable=False)
-    create_at =  db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
-    )
-    is_read = db.Column(db.Boolean, default=False)
+    # target
+    customer_id = db.Column(db.Integer, db.ForeignKey("customer.user_id"), nullable=True)
+    owner_id    = db.Column(db.Integer, db.ForeignKey("restaurant_owner.user_id"), nullable=True)
+
+    message   = db.Column(db.String(255), nullable=False)
+
+    is_read   = db.Column(db.Boolean, default=False)
+    create_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")))
 
     order = db.relationship("Order", backref=db.backref("notifications", cascade="all, delete-orphan"))
 
+    __table_args__ = (
+        db.Index("idx_noti_cus_unread", "customer_id", "is_read"),
+        db.Index("idx_noti_owner_unread", "owner_id", "is_read"),
+    )
 
 class OrderRating(db.Model):
     __tablename__ = "order_rating"

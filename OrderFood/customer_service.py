@@ -7,7 +7,7 @@ from OrderFood import db, dao_index
 from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
-    Order, StatusOrder, StatusCart
+    Order, StatusOrder, StatusCart, Notification
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -159,3 +159,60 @@ def customer_home():
         })
 
     return render_template("customer_home.html", restaurants=restaurants_with_stars)
+
+@customer_bp.route("/notifications/json")
+def notifications_json():
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        return jsonify({"items": [], "unread_count": 0}), 200
+
+    # Lấy noti của chính customer qua JOIN với order
+    items = (db.session.query(Notification)
+             .join(Order, Notification.order_id == Order.order_id)
+             .filter(Order.customer_id == uid)
+             .order_by(Notification.create_at.desc())
+             .limit(30)
+             .all())
+
+    def to_dict(n):
+        return {
+            "id": n.noti_id,
+            "order_id": n.order_id,
+            "message": n.message,
+            "created_at": n.create_at.strftime("%H:%M %d/%m/%Y") if n.create_at else "",
+            "is_read": bool(n.is_read),
+        }
+
+    unread = sum(0 if n.is_read else 1 for n in items)
+    return jsonify({"items": [to_dict(n) for n in items], "unread_count": unread}), 200
+
+
+@customer_bp.route("/notifications/open/<int:noti_id>")
+def notifications_open(noti_id):
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        abort(403)
+
+    n = Notification.query.get_or_404(noti_id)
+    # Xác thực chủ đơn qua quan hệ n.order (đã có relationship)
+    if not n.order or n.order.customer_id != uid:
+        abort(403)
+
+    n.is_read = True
+    db.session.commit()
+    return redirect(url_for("customer.order_track", order_id=n.order_id))
+
+
+@customer_bp.route("/notifications/mark-all-read", methods=["POST"])
+def notifications_mark_all_read():
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        abort(403)
+
+    # Đánh dấu tất cả noti của uid là đã đọc (JOIN để lọc theo chủ đơn)
+    (db.session.query(Notification)
+       .join(Order, Notification.order_id == Order.order_id)
+       .filter(Order.customer_id == uid, Notification.is_read == False)
+       .update({"is_read": True}, synchronize_session=False))
+    db.session.commit()
+    return jsonify({"ok": True})
