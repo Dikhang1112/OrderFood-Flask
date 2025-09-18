@@ -1,5 +1,7 @@
 # OrderFood/notifications.py
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, session, request, url_for, abort
@@ -9,7 +11,18 @@ from OrderFood import db
 from OrderFood.models import Notification, Restaurant, Order
 
 
-# ===== Helpers =====
+# ========= Helpers =========
+
+_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _now():
+    """Trả về thời điểm hiện tại theo Asia/Ho_Chi_Minh (fallback UTC nếu thiếu zoneinfo)."""
+    try:
+        return datetime.now(_TZ)
+    except Exception:
+        return datetime.now(timezone.utc)
+
 
 def _owner_user_id_from_order(order: Order) -> int | None:
     """order -> restaurant_id -> restaurant.res_owner_id"""
@@ -18,49 +31,11 @@ def _owner_user_id_from_order(order: Order) -> int | None:
     )
 
 
-def push_owner_noti_on_paid(order: Order) -> None:
-    """PAID -> noti cho OWNER. (customer_id=None, owner_id=owner)"""
-    owner_uid = _owner_user_id_from_order(order)
-    if not owner_uid:
-        return
-    n = Notification(
-        order_id=order.order_id,
-        message="Bạn có 1 đơn hàng cần xác nhận",
-        customer_id=None,
-        owner_id=owner_uid,
-        is_read=False,
-        create_at=datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")),
-    )
-    db.session.add(n)
-    db.session.commit()
-
-
-def push_customer_noti_on_completed(order: Order) -> None:
-    """COMPLETED -> noti cho CUSTOMER. (owner_id=None, customer_id=order.customer_id)"""
-    if not order.customer_id:
-        return
-    n = Notification(
-        order_id=order.order_id,
-        message="Đơn hàng đã được giao thành công",
-        customer_id=order.customer_id,
-        owner_id=None,
-        is_read=False,
-        create_at=datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")),
-    )
-    db.session.add(n)
-    db.session.commit()
-
-
-# ===== Blueprint =====
-
-noti_bp = Blueprint("noti", __name__)
-
-
-def _role_to_str(r):
+def _role_to_str(r) -> str:
     return (getattr(r, "value", r) or "").lower()
 
 
-def _require_auth():
+def _require_auth() -> tuple[int, str]:
     uid = session.get("user_id")
     role = _role_to_str(session.get("role"))
     if not uid or role not in ("customer", "restaurant_owner"):
@@ -68,29 +43,78 @@ def _require_auth():
     return uid, role
 
 
+def _add_noti(order_id: int, message: str, *, customer_id: int | None, owner_id: int | None) -> None:
+    """Tạo 1 bản ghi thông báo (có thể đồng thời cho cả customer & owner)."""
+    n = Notification(
+        order_id=order_id,
+        message=message,
+        customer_id=customer_id,
+        owner_id=owner_id,
+        is_read=False,
+        create_at=_now(),
+    )
+    db.session.add(n)
+    db.session.commit()
+
+
+# ========= Pushers (gọi từ nghiệp vụ) =========
+
+def push_owner_noti_on_paid(order: Order) -> None:
+    """Khi đơn PAID -> noti cho OWNER."""
+    owner_uid = _owner_user_id_from_order(order)
+    if owner_uid:
+        _add_noti(order.order_id, "Bạn có 1 đơn hàng cần xác nhận",
+                  customer_id=None, owner_id=owner_uid)
+
+
+def push_customer_noti_on_completed(order: Order) -> None:
+    """Khi đơn COMPLETED -> noti cho CUSTOMER."""
+    if order.customer_id:
+        _add_noti(order.order_id, "Đơn hàng đã được giao thành công",
+                  customer_id=order.customer_id, owner_id=None)
+
+
+def push_both_noti(order: Order, message: str) -> None:
+    """
+    Tạo 1 thông báo gửi cho CẢ hai phía (customer & owner) trong CÙNG một dòng.
+    Ví dụ dùng cho case quá thời gian xác nhận, hệ thống hủy, v.v.
+    """
+    owner_uid = _owner_user_id_from_order(order)
+    _add_noti(order.order_id, message,
+              customer_id=order.customer_id, owner_id=owner_uid)
+
+
+# ========= Blueprint API =========
+
+noti_bp = Blueprint("noti", __name__)
+
+
 @noti_bp.get("/notifications/feed")
 def notifications_feed():
     """
-    Trả về cả đã đọc + chưa đọc (không xóa item),
+    Trả về cả đã đọc + chưa đọc (KHÔNG đánh dấu đã đọc),
     kèm 'unread' để hiện badge và 'target_url' để điều hướng.
+    Query param optional: ?limit=30
     """
     uid, role = _require_auth()
+    limit = request.args.get("limit", 30, type=int)
 
     if role == "restaurant_owner":
         q = Notification.query.filter_by(owner_id=uid)
     else:
         q = Notification.query.filter_by(customer_id=uid)
 
-    items = q.order_by(desc(Notification.create_at)).limit(20).all()
+    items = q.order_by(desc(Notification.create_at)).limit(limit).all()
     unread = sum(1 for n in items if not n.is_read)
 
-    # URL đích theo role
     data = []
     for n in items:
         if role == "restaurant_owner":
-            target_url = url_for("manage_orders")  # trang quản lý đơn của owner
+            # sửa: dùng đúng endpoint của owner
+            target_url = url_for("owner.manage_orders")
         else:
             target_url = url_for("customer.order_track", order_id=n.order_id)
+
         data.append({
             "id": n.noti_id,
             "order_id": n.order_id,
@@ -107,7 +131,8 @@ def notifications_feed():
 def notifications_mark_read():
     """
     Đánh dấu đã đọc theo danh sách id (giữ lại item).
-    Có kiểm tra quyền dựa trên role + user hiện tại.
+    Chỉ cập nhật các noti thuộc về user hiện tại.
+    Body JSON: { "ids": [1,2,3] }
     """
     uid, role = _require_auth()
     payload = request.get_json(silent=True) or {}
@@ -115,7 +140,6 @@ def notifications_mark_read():
     if not ids:
         return jsonify({"ok": True, "updated": 0})
 
-    # chỉ update những noti thuộc về user hiện tại
     q = Notification.query.filter(Notification.noti_id.in_(ids))
     if role == "restaurant_owner":
         q = q.filter(Notification.owner_id == uid)
@@ -134,7 +158,7 @@ def notifications_mark_read_one(noti_id: int):
 
     n = Notification.query.get_or_404(noti_id)
     if (role == "restaurant_owner" and n.owner_id != uid) or \
-            (role == "customer" and n.customer_id != uid):
+       (role == "customer" and n.customer_id != uid):
         abort(403)
 
     if not n.is_read:
@@ -147,11 +171,12 @@ def notifications_mark_read_one(noti_id: int):
 def notifications_mark_all_read():
     """Đánh dấu tất cả noti của user hiện tại là đã đọc (không xóa)."""
     uid, role = _require_auth()
-    q = Notification.query
+
+    q = Notification.query.filter_by(is_read=False)
     if role == "restaurant_owner":
-        q = q.filter_by(owner_id=uid, is_read=False)
+        q = q.filter_by(owner_id=uid)
     else:
-        q = q.filter_by(customer_id=uid, is_read=False)
+        q = q.filter_by(customer_id=uid)
 
     updated = q.update({"is_read": True}, synchronize_session=False)
     db.session.commit()

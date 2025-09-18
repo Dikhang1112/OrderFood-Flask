@@ -5,6 +5,8 @@
   const LIST  = document.getElementById('notiList');        // list container
   const BADGE = document.getElementById('notiBadge');       // số chưa đọc
 
+  let inflight; // AbortController cho fetch hiện tại
+
   function setBadge(unread) {
     const n = Number(unread || 0);
     if (!BADGE) return;
@@ -29,16 +31,35 @@
 
   async function loadNotis() {
     try {
-      const res = await fetch('/notifications/feed', { credentials: 'same-origin' });
+      // Hủy request cũ nếu còn
+      inflight?.abort?.();
+      inflight = new AbortController();
+
+      const res = await fetch('/notifications/feed', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        signal: inflight.signal
+      });
       if (!res.ok) return;
       renderNotis(await res.json());
     } catch (err) {
-      console.error('loadNotis failed', err);
+      if (err.name !== 'AbortError') console.error('loadNotis failed', err);
     }
   }
 
-  // Khi dropdown SẮP mở, gọi load
+  // 1) Tải ngay khi trang load xong
+  document.addEventListener('DOMContentLoaded', loadNotis);
+
+  // 2) Tải lại khi dropdown sắp mở (đảm bảo dữ liệu mới nhất)
   BTN?.addEventListener('show.bs.dropdown', loadNotis);
+
+  // 3) Tải lại khi tab quay lại foreground
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadNotis();
+  });
+
+  // 4) (tuỳ chọn) Poll mỗi 30s
+  setInterval(loadNotis, 30000);
 
   // Click 1 item: mark read (không xóa) rồi điều hướng
   LIST?.addEventListener('click', async (e) => {

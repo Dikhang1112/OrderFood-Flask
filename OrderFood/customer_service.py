@@ -1,5 +1,6 @@
 # OrderFood/customer.py
-from flask import Blueprint, render_template, request, session, abort, jsonify,redirect, url_for
+from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for, flash
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 
@@ -7,7 +8,7 @@ from OrderFood import db, dao_index
 from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
-    Order, StatusOrder, StatusCart, Notification
+    Order, StatusOrder, StatusCart, Notification, OrderRating
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -19,6 +20,23 @@ def _role_to_str(r):
 def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
+def update_restaurant_rating(restaurant_id: int):
+    subq = (
+        db.session.query(OrderRating.rating)
+        .join(Order, OrderRating.order_id == Order.order_id)
+        .filter(Order.restaurant_id == restaurant_id,
+                OrderRating.rating >= 1, OrderRating.rating <= 5)
+        .order_by(OrderRating.orating_id.desc())
+        .limit(20)
+        .subquery()
+    )
+
+    avg_rating = db.session.query(func.avg(subq.c.rating)).scalar()
+
+    res = Restaurant.query.get(restaurant_id)
+    if res:
+        res.rating_point = float(avg_rating or 0)
+        db.session.commit()
 
 # ============== routes render customer/*.html ==============
 
@@ -108,39 +126,7 @@ def my_orders():
     )
 
 
-@customer_bp.route("/order/<int:order_id>/track")
-def order_track(order_id):
-    uid = session.get("user_id")
-    if not uid:
-        abort(403)
 
-    order = Order.query.get_or_404(order_id)
-    # chỉ chủ đơn (hoặc admin) mới xem được
-    if order.customer_id != uid and (session.get("role") or "").upper() != "ADMIN":
-        abort(403)
-
-    s = getattr(order.status, "value", order.status) or ""
-    s = s.upper()
-    is_paid      = (s == "PAID")
-    is_accepted  = (s in ("ACCEPTED", "ACCEPT"))
-    is_canceled  = (s == "CANCELED")
-    is_completed = (s == "COMPLETED")
-
-    if is_paid:
-        active_idx = 0
-    elif is_accepted:
-        active_idx = 1
-    elif is_canceled or is_completed:
-        active_idx = 2
-    else:
-        active_idx = -1
-
-    last_label = "Đã hủy" if is_canceled else "Đã giao hàng thành công"
-
-    return render_template(
-        "customer/order_track.html",
-        order=order, active_idx=active_idx, last_label=last_label, status_str=s
-    )
 
 
 @customer_bp.route("/customer")
@@ -216,3 +202,78 @@ def notifications_mark_all_read():
        .update({"is_read": True}, synchronize_session=False))
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@customer_bp.route("/order/<int:order_id>/rate", methods=["POST"])
+def order_rate(order_id):
+    uid = session.get("user_id") or abort(403)
+    order = Order.query.get_or_404(order_id)
+    if order.customer_id != uid:
+        abort(403)
+
+    # Chỉ cho đánh giá khi hoàn tất
+    if (getattr(order.status, "value", order.status) or "").upper() != "COMPLETED":
+        flash("Chỉ có thể đánh giá khi đơn đã giao thành công.", "warning")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    # Chặn đánh giá lại
+    if OrderRating.query.filter_by(order_id=order_id, customer_id=uid).first():
+        flash("Bạn đã đánh giá đơn hàng này rồi.", "warning")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    rating = request.form.get("rating", type=int)
+    comment = (request.form.get("comment") or "").strip()
+    if not rating or rating < 1 or rating > 5:
+        flash("Điểm đánh giá không hợp lệ.", "danger")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    db.session.add(OrderRating(order_id=order_id, customer_id=uid, rating=rating, comment=comment))
+    db.session.commit()
+    update_restaurant_rating(order.restaurant_id)
+    flash("Cảm ơn bạn đã đánh giá!", "success")
+    return redirect(url_for("customer.order_track", order_id=order_id))
+
+@customer_bp.route("/order/<int:order_id>/track")
+def order_track(order_id):
+    uid = session.get("user_id")
+    if not uid:
+        abort(403)
+
+    order = Order.query.get_or_404(order_id)
+    if order.customer_id != uid and (session.get("role") or "").upper() != "ADMIN":
+        abort(403)
+
+    s = (getattr(order.status, "value", order.status) or "").upper()
+    is_paid      = (s == "PAID")
+    is_accepted  = (s in ("ACCEPTED", "ACCEPT"))
+    is_canceled  = (s == "CANCELED")
+    is_completed = (s == "COMPLETED")
+
+    if is_paid:
+        active_idx = 0
+    elif is_accepted:
+        active_idx = 1
+    elif is_canceled or is_completed:
+        active_idx = 2
+    else:
+        active_idx = -1
+
+    last_label = "Đã hủy" if is_canceled else "Đã giao hàng thành công"
+
+    # === thông tin đánh giá ===
+    rated = OrderRating.query.filter_by(order_id=order_id, customer_id=uid).first()
+    has_rated = bool(rated)
+    user_rating = rated.rating if rated else None
+    user_comment = rated.comment if rated else None
+
+    return render_template(
+        "customer/order_track.html",
+        order=order,
+        active_idx=active_idx,
+        last_label=last_label,
+        status_str=s,
+        is_completed=is_completed,
+        has_rated=has_rated,
+        user_rating=user_rating,
+        user_comment=user_comment,
+    )

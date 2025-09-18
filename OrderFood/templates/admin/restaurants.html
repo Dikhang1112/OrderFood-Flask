@@ -1,19 +1,36 @@
 {% include "/admin/sidebar.html" %}
 <head>
+  <!-- Vẫn dùng JS xử lý approve/reject -->
   <script src="{{ url_for('static', filename='js/admin/manageRestaurant.js') }}"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listRestaurant.css') }}"/>
+
   <style>
-    /* hiệu ứng hover và con trỏ tay */
-    .rs-row.clickable { cursor: pointer; }
-    .rs-row.clickable:hover { box-shadow: 0 8px 24px rgba(0,0,0,.3);}
-    /* tránh xung đột khi bấm nút Action */
-    .rs-action { pointer-events: auto; }
+    /* Hàng có thể click */
+    .rs-row { position: relative; }
+    .rs-row:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+
+    /* Anchor phủ toàn bộ hàng để điều hướng – KHÔNG cần JS */
+    .row-link {
+      position: absolute;
+      inset: 0;              /* top/right/bottom/left: 0 */
+      z-index: 1;            /* dưới các nút action */
+      display: block;
+      border-radius: 12px;   /* khớp card row nếu có */
+    }
+
+    /* Đảm bảo nút action nằm trên anchor và vẫn bấm được */
+    .rs-col--action,
+    .rs-action { position: relative; z-index: 2; }
+
+    /* Con trỏ tay để người dùng biết có thể click */
+    .rs-row { cursor: pointer; }
   </style>
 </head>
+
 <main class="page">
   <div class="container-fluid mt-4">
     <h2 class="mb-4">Danh sách Nhà hàng</h2>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listRestaurant.css') }}"/>
 
     <table class="rs-table table table-hover align-middle">
       <thead class="rs-thead">
@@ -29,12 +46,14 @@
 
       <tbody class="rs-body">
         {% for r in restaurants %}
-        <!-- gắn data-href để click/enter chuyển trang -->
-        <tr class="rs-row clickable"
-            data-id="{{ r.restaurant_id }}"
-            data-href="{{ url_for('admin.restaurant_detail', restaurant_id=r.restaurant_id) }}"
-            role="button" tabindex="0" aria-label="Xem chi tiết nhà hàng {{ r.name }}">
+        <tr class="rs-row">
+          <!-- Anchor phủ cả hàng: click -> sang trang chi tiết -->
+          <a class="row-link"
+             href="{{ url_for('admin.restaurant_detail', restaurant_id=r.restaurant_id) }}"
+             aria-label="Xem chi tiết nhà hàng {{ r.name }}"></a>
+
           <td class="rs-col rs-col--id"><div class="rs-id">#{{ r.restaurant_id }}</div></td>
+
           <td class="rs-col rs-col--name">
             <div class="rs-card">
               <div class="rs-info">
@@ -45,7 +64,9 @@
               </div>
             </div>
           </td>
+
           <td class="rs-col rs-col--addr">{{ r.address or "—" }}</td>
+
           <td class="rs-col rs-col--status">
             {% if r.status %}
               <span class="rs-badge rs-badge--{{ 'ok' if r.status.value=='APPROVED'
@@ -53,18 +74,30 @@
                                                else 'err' }}">{{ r.status.value }}</span>
             {% endif %}
           </td>
-          <td class="rs-col rs-col--rating">{{ "{:.1f}".format(r.rating_point) if r.rating_point else "Không" }}🌟</td>
+
+          <td class="rs-col rs-col--rating">
+            {{ "{:.1f}".format(r.rating_point) if r.rating_point else "Không" }}🌟
+          </td>
+
           <td class="rs-col rs-col--action">
             <button class="rs-action rs-action--approve" title="Approve" data-id="{{ r.restaurant_id }}">
-              <svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 24 24" class="ic">
+                <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </button>
             <button class="rs-action rs-action--reject" title="Reject" data-id="{{ r.restaurant_id }}">
-              <svg viewBox="0 0 24 24" class="ic"><path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" class="ic">
+                <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round"/>
+              </svg>
             </button>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="text-center text-muted py-4">Không có nhà hàng nào.</td></tr>
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">Không có nhà hàng nào.</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -77,25 +110,3 @@
     {% endif %}
   </div>
 </main>
-
-<script>
-  // Điều hướng khi click vào hàng (trừ khi click nút Action)
-  document.addEventListener('click', function(e){
-    const row = e.target.closest('.rs-row.clickable');
-    const isAction = !!e.target.closest('.rs-action');
-    if (!row || isAction) return;
-    const href = row.getAttribute('data-href');
-    if (href) window.location.href = href;
-  });
-
-  // Điều hướng khi nhấn Enter trên hàng đang focus
-  document.addEventListener('keydown', function(e){
-    if (e.key !== 'Enter') return;
-    const row = document.activeElement && document.activeElement.classList.contains('rs-row')
-                ? document.activeElement
-                : (document.activeElement ? document.activeElement.closest('.rs-row.clickable') : null);
-    if (!row) return;
-    const href = row.getAttribute('data-href');
-    if (href) window.location.href = href;
-  });
-</script>
