@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request
 from flask import current_app
+from datetime import datetime
+from sqlalchemy import func, extract
 from sqlalchemy.orm import joinedload
 
 from OrderFood import db
@@ -213,3 +215,56 @@ def cancel_order(order_id: int):
 
     return redirect(url_for("admin.admin_delivery"))
 
+
+# @admin_bp.route("/api/stats/users-owners")
+# def stats_users_owners():
+#     if not is_admin(session.get("role")):
+#         return jsonify({"error": "forbidden"}), 403
+#
+#     now = datetime.now()
+#     labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
+#     users, owners = [], []
+#
+#     for m in range(1, now.month + 1):
+#         # đếm customer mới
+#         u_count = db.session.query(func.count(Customer.customer_id)) \
+#             .filter(extract("month", .created_date) == m,
+#                     extract("year", Customer.created_date) == now.year) \
+#             .scalar()
+#         # đếm owner mới (từ bảng Restaurant)
+#         o_count = db.session.query(func.count(Restaurant.res_owner_id.distinct())) \
+#             .filter(extract("month", Restaurant.created_date) == m,
+#                     extract("year", Restaurant.created_date) == now.year) \
+#             .scalar()
+#
+#         users.append(u_count or 0)
+#         owners.append(o_count or 0)
+
+    return jsonify({
+        "labels": labels,
+        "users": users,
+        "owners": owners
+    })
+
+
+@admin_bp.route("/api/stats/transactions")
+def stats_transactions():
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    now = datetime.now()
+    labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
+    transactions = []
+
+    for m in range(1, now.month + 1):
+        t_count = db.session.query(func.count(Order.order_id)) \
+            .filter(extract("month", Order.created_date) == m,
+                    extract("year", Order.created_date) == now.year,
+                    Order.status == StatusOrder.COMPLETED) \
+            .scalar()
+        transactions.append(t_count or 0)
+
+    return jsonify({
+        "labels": labels,
+        "transactions": transactions
+    })
