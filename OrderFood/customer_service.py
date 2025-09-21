@@ -18,6 +18,21 @@ def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
 
+
+from datetime import datetime
+
+def is_restaurant_open(restaurant):
+    if not restaurant.is_open:
+        return False
+    try:
+        open_time = datetime.strptime(restaurant.open_hour, "%H:%M").time()
+        close_time = datetime.strptime(restaurant.close_hour, "%H:%M").time()
+        now = datetime.now().time()
+        return open_time <= now <= close_time
+    except Exception as e:
+        # Trường hợp open_hour/close_hour không hợp lệ
+        return False
+
 # ============== routes render customer/*.html ==============
 
 @customer_bp.route("/restaurant/<int:restaurant_id>")
@@ -31,6 +46,7 @@ def restaurant_detail(restaurant_id):
 
     cart_items_count = 0
     user_id = session.get("user_id")
+    is_open = is_restaurant_open(res)
     if user_id:
         cart = dao_cus.get_active_cart(user_id, res.restaurant_id)
         cart_items_count = dao_cus.count_cart_items(cart)
@@ -42,6 +58,7 @@ def restaurant_detail(restaurant_id):
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
+        is_open=is_open
     )
 
 @customer_bp.route("/cart/<int:restaurant_id>")
@@ -57,8 +74,9 @@ def cart(restaurant_id):
     cart = dao_cus.get_active_cart(customer.user_id, restaurant_id)
     cart_items = cart.items if cart else []
     total_price = sum(item.quantity * item.dish.price for item in cart_items) if cart_items else 0
-
-    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+    is_open = is_restaurant_open(Restaurant.query.filter_by(restaurant_id=restaurant_id).first())
+    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price
+                           , is_open=is_open)
 
 @customer_bp.route("/orders")
 def my_orders():
@@ -179,3 +197,5 @@ def order_track(order_id):
         user_rating=user_rating,
         user_comment=user_comment,
     )
+
+
