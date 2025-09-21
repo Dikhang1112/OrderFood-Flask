@@ -1,11 +1,62 @@
 {% extends "layout/base.html" %}
-{% block title %}Khu Chủ Quán{% endblock %}
-
+{% block title %}Đăng nhập{% endblock %}
 {% block content %}
 <div class="mt-4 p-5 bg-light border rounded">
-  <h2>Xin chào, {{ session.get('user_email') }}</h2>
-  <p>Bạn đang đăng nhập với vai trò <strong>Restaurant Owner</strong>.</p>
-  <p>Tại đây bạn có thể quản lý nhà hàng, thực đơn và đơn đặt hàng từ khách hàng.</p>
-    <a class="btn btn-success" href="/owner/menu">Chỉnh sửa thực đơn</a>
-</div>
+    <h2>Xin chào, {{ session.get('user_email') }}</h2>
+    <p>Bạn đang đăng nhập với vai trò <strong>Restaurant Owner</strong>.</p>
+
+    {% if restaurant is none %}
+    <p>Bạn chưa đăng ký mở nhà hàng, hãy đăng ký tại đây</p>
+    <a class="btn btn-primary" href="{{ url_for('res_register') }}">Đăng ký nhà hàng</a>
+    {% elif restaurant.status.name == "PENDING" %}
+    <p>Đơn đăng ký nhà hàng của bạn đang được duyệt</p>
+    {% elif restaurant.status.name == "APPROVED" %}
+    <h4>Doanh thu</h4>
+    <p>Hôm nay: <strong id="revenue-today">0</strong> VND</p>
+    <p>Tháng này: <strong id="revenue-month">0</strong> VND</p>
+
+    <div class="row">
+        <div class="row">
+            <!-- Donut Chart -->
+            <div class="col-md-6 col-sm-12 mb-4">
+                <h5>Số lượng món ăn bán ra</h5>
+                <select id="dishDonutMode" class="form-select form-select-sm w-auto mb-2">
+                    <option value="day">Theo ngày</option>
+                    <option value="month">Theo tháng hiện tại</option>
+                    <option value="custom_month">Theo 1 tháng cụ thể</option>
+                    <option value="quarter">Theo quý</option>
+                </select>
+                <!-- select tháng và quý -->
+                <select id="dishCustomMonth" class="form-select form-select-sm w-auto mb-2" style="display:none;"></select>
+                <select id="dishQuarter" class="form-select form-select-sm w-auto mb-2" style="display:none;"></select>
+
+                <canvas id="dishDonutChart"></canvas>
+            </div>
+
+            <!-- Line Chart -->
+            <div class="col-md-6 col-sm-12 mb-4">
+                <h5>Doanh thu theo thời gian</h5>
+                <select id="revenueLineMode" class="form-select form-select-sm w-auto mb-2">
+                    <option value="day">Theo ngày trong tháng hiện tại</option>
+                    <option value="month">Theo tháng trong năm</option>
+                    <option value="custom_month">Theo 1 tháng cụ thể</option>
+                    <option value="quarter">Theo quý</option>
+                </select>
+                <!-- select tháng và quý -->
+                <select id="revenueCustomMonth" class="form-select form-select-sm w-auto mb-2" style="display:none;"></select>
+                <select id="revenueQuarter" class="form-select form-select-sm w-auto mb-2" style="display:none;"></select>
+
+                <canvas id="revenueLineChart"></canvas>
+            </div>
+        </div>
+        {% elif restaurant.status.name == "REJECTED" %}
+        <p>Nhà hàng của bạn không được chấp thuận, hãy kiểm tra lý do trong email</p>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/owner/chart-owner.js') }}"></script>
+    <script>
+        window.RESTAURANT_ID = {{ restaurant.restaurant_id }};
+    </script>
 {% endblock %}

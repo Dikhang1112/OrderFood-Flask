@@ -3,6 +3,17 @@
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">Quản lý đơn hàng</h2>
+    {# Hiển thị banner nếu nhà hàng đang chờ duyệt #}
+{% if res %}
+  {% set st = (res.status.value if res.status is not none else res.status)|string|lower %}
+  {% if st == 'pending' %}
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+      <div>
+        Nhà hàng của bạn đang được duyệt. Một số chức năng có thể bị hạn chế.
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
     <!-- Tabs -->
     <ul class="nav nav-tabs" id="orderTabs" role="tablist">
         <li class="nav-item" role="presentation">

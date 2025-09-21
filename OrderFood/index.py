@@ -117,6 +117,9 @@ def register():
         session["role"] = (role_val or "").lower()
 
         flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
+        if is_owner(user.role):
+
+            return redirect(url_for("owner_home"))
         return redirect(url_for("index"))
 
     return render_template("auth.html")  # :contentReference[oaicite:3]{index=3}
@@ -138,6 +141,7 @@ def login():
         session["user_name"] = user.name
         session["role"] = _role_to_str(user.role)
 
+
         if is_owner(user.role):
             return redirect(url_for("owner_home"))
         if is_admin(user.role):
@@ -154,13 +158,166 @@ def logout():
     return redirect(url_for("index"))
 
 
+@app.route("/owner/res_register", methods=["GET", "POST"])
+def res_register():
+    if request.method == "GET":
+        return render_template("owner/res_register.html")
+
+    if request.method == "POST":
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"success": False, "error": "Chưa đăng nhập"}), 401
+
+        # Check đã có restaurant chưa
+        existing = Restaurant.query.filter_by(res_owner_id=user_id).first()
+        if existing:
+            return jsonify({"success": False, "error": "Bạn đã đăng ký nhà hàng rồi"}), 400
+
+        name = request.form.get("name")
+        address = request.form.get("address")
+        open_hour = request.form.get("open_hour")
+        close_hour = request.form.get("close_hour")
+        tax = request.form.get("tax")
+        image_url = request.form.get("image_url")
+
+        if not all([name, address, open_hour, close_hour, tax]):
+            return jsonify({"success": False, "error": "Thiếu thông tin bắt buộc"}), 400
+
+        # cập nhật tax vào bảng restaurant_owner
+        owner = RestaurantOwner.query.get(user_id)
+        if owner:
+            owner.tax = tax
+        else:
+            owner = RestaurantOwner(user_id=user_id, tax=tax)
+            db.session.add(owner)
+
+        # tạo restaurant
+        restaurant = Restaurant(
+            name=name,
+            address=address,
+            open_hour=open_hour,
+            close_hour=close_hour,
+            image=image_url,
+            res_owner_id=user_id,
+            status=StatusRes.PENDING
+        )
+
+        db.session.add(restaurant)
+        db.session.commit()
+
+        return jsonify({"success": True, "restaurant_id": restaurant.restaurant_id})
+
+
+# ==========================API CHART ====================
+@app.route("/api/owner/<int:restaurant_id>/stats/revenue")
+def revenue_summary(restaurant_id):
+    today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+    month = today.month
+    year = today.year
+
+    # Doanh thu ngày (tổng payment đã PAID)
+    day_total = db.session.query(func.coalesce(func.sum(Payment.amount), 0))\
+        .join(Order, Order.order_id == Payment.order_id)\
+        .filter(Order.restaurant_id == restaurant_id,
+                func.date(Order.created_date) == today,
+                Payment.status == "PAID").scalar()
+
+    # Doanh thu tháng
+    month_total = db.session.query(func.coalesce(func.sum(Payment.amount), 0))\
+        .join(Order, Order.order_id == Payment.order_id)\
+        .filter(Order.restaurant_id == restaurant_id,
+                func.extract('month', Order.created_date) == month,
+                func.extract('year', Order.created_date) == year,
+                Payment.status == "PAID").scalar()
+
+    return jsonify({
+        "today": int(day_total/100),   # Payment.amount đang *100 theo VNPay
+        "month": int(month_total/100)
+    })
+
+
+# =============================
+# API donut chart: số lượng món ăn
+# =============================
+@app.route("/api/owner/<int:restaurant_id>/stats/dishes")
+def dish_stats(restaurant_id):
+    mode = request.args.get("mode", "day")
+    today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+    month = today.month
+    year = today.year
+
+    query = db.session.query(
+        Dish.name,
+        func.sum(CartItem.quantity).label("qty")
+    ).join(CartItem, CartItem.dish_id == Dish.dish_id)\
+     .join(Order, Order.cart_id == CartItem.cart_id)\
+     .filter(Order.restaurant_id == restaurant_id,
+             Order.status.in_(["PAID", "ACCEPTED", "COMPLETED"]))
+
+    if mode == "day":
+        query = query.filter(func.date(Order.created_date) == today)
+    elif mode == "month":
+        query = query.filter(func.extract("month", Order.created_date) == month,
+                             func.extract("year", Order.created_date) == year)
+
+    data = query.group_by(Dish.name).all()
+
+    return jsonify([{"dish": d[0], "quantity": int(d[1])} for d in data])
+
+
+# =============================
+# API line chart: doanh thu theo ngày/tháng
+# =============================
+@app.route("/api/owner/<int:restaurant_id>/stats/revenue_line")
+def revenue_line(restaurant_id):
+    mode = request.args.get("mode", "day")
+    today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    month = today.month
+    year = today.year
+
+    if mode == "day":
+        data = db.session.query(
+            func.extract("day", Order.created_date).label("d"),
+            func.coalesce(func.sum(Payment.amount), 0)
+        ).join(Payment, Payment.order_id == Order.order_id)\
+         .filter(Order.restaurant_id == restaurant_id,
+                 func.extract("month", Order.created_date) == month,
+                 func.extract("year", Order.created_date) == year,
+                 Payment.status == "PAID")\
+         .group_by("d").order_by("d").all()
+
+        return jsonify([{"label": int(d[0]), "revenue": int(d[1]/100)} for d in data])
+
+    elif mode == "month":
+        data = db.session.query(
+            func.extract("month", Order.created_date).label("m"),
+            func.coalesce(func.sum(Payment.amount), 0)
+        ).join(Payment, Payment.order_id == Order.order_id)\
+         .filter(Order.restaurant_id == restaurant_id,
+                 func.extract("year", Order.created_date) == year,
+                 Payment.status == "PAID")\
+         .group_by("m").order_by("m").all()
+
+        return jsonify([{"label": int(d[0]), "revenue": int(d[1]/100)} for d in data])
+
+
 @app.route("/owner")
 def owner_home():
     if not is_owner(session.get("role")):
         return redirect(url_for("login"))
-    return render_template("owner_home.html")
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
 
+    user = User.query.get(user_id)
 
+    restaurant = None
+    if user and user.restaurant_owner:
+        restaurant = user.restaurant_owner.restaurant
+
+    return render_template("owner_home.html", restaurant=restaurant)
+
+# ==================MENU=====================
 @app.route("/owner/menu")
 def get_menu():
     user_id = session.get("user_id")
@@ -295,7 +452,7 @@ def edit_dish(dish_id):
 
     # index.py
 
-
+# =============== ORDER ===============
 @app.route("/owner/menu/<int:dish_id>", methods=["DELETE"])
 def delete_dish(dish_id):
     try:
@@ -317,6 +474,7 @@ def delete_dish(dish_id):
 def manage_orders():
     user_id = session.get("user_id")
     user = User.query.get(user_id)
+
     if not user_id:
         return redirect(url_for("login"))
 
@@ -464,6 +622,8 @@ def cart(restaurant_id):
         total_price = sum(item.quantity * item.dish.price for item in cart_items)
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+
+
 
 
 @app.errorhandler(500)
