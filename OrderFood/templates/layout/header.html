@@ -4,13 +4,13 @@
         <!-- Brand -->
         <a class="navbar-brand"
            href="{% set r=(session.get('role') or '').lower() %}
-              {% if r == 'restaurant_owner' %}
-                {{ url_for('owner_home') }}
-              {% elif r == 'customer' %}
-                {{ url_for('index') }}
-              {% else %}
-                {{ url_for('index') }}
-              {% endif %}">
+                  {% if r == 'restaurant_owner' %}
+                    {{ url_for('owner_home') }}
+                  {% elif r == 'customer' %}
+                    {{ url_for('index') }}
+                  {% else %}
+                    {{ url_for('index') }}
+                  {% endif %}">
             OrderFood
         </a>
 
@@ -25,8 +25,12 @@
                 {% if r == 'customer' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a></li>
                 {% elif r == 'restaurant_owner' %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('get_menu') }}">Chỉnh sửa món ăn</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_orders') }}">Quản lý đơn hàng</a></li>
+                    {% if restaurant and restaurant.status.name == "APPROVED" %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('get_menu') }}">Chỉnh sửa món ăn</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_orders') }}">Quản lý đơn hàng</a></li>
+                    {% else %}
+                    <li class="nav-item"><span class="nav-link text-muted">Nhà hàng đang chờ duyệt...</span></li>
+                    {% endif %}
                 {% elif r == 'admin' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.admin_home') }}">Admin</a></li>
                 {% endif %}
