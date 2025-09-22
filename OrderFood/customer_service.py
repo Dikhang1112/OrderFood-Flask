@@ -1,4 +1,5 @@
 # OrderFood/customer.py
+<<<<<<< HEAD
 from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for
 
 from OrderFood import dao_index
@@ -6,6 +7,15 @@ from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, Customer,
     Order, StatusOrder, StatusCart
+=======
+from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for, flash
+
+from OrderFood.dao import customer_dao as dao_cus
+from OrderFood.models import (
+    Restaurant, Dish, Category,
+    Cart, CartItem, Customer,
+    Order, StatusOrder, StatusCart, Notification, OrderRating
+>>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -25,13 +35,12 @@ def is_customer(role: str) -> bool:
 
 @customer_bp.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
-    res = dao_index.get_restaurant_by_id(restaurant_id)
+    res = dao_cus.get_restaurant_by_id(restaurant_id)
     if not res:
         abort(404)
 
-    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
-    categories = Category.query.filter_by(res_id=restaurant_id).all()
-    stars = dao_index.get_star_display(res.rating_point or 0)
+    dishes, categories = dao_cus.get_restaurant_menu_and_categories(restaurant_id)
+    stars = dao_cus.get_star_display(res.rating_point or 0)
 
     # --- NEW: gom món theo category_id ---
     dishes_by_category = {}
@@ -43,16 +52,8 @@ def restaurant_detail(restaurant_id):
     cart_items_count = 0
     user_id = session.get("user_id")
     if user_id:
-        from sqlalchemy import or_
-
-        cart = Cart.query.filter(
-            Cart.cus_id == user_id,
-            Cart.res_id == res.restaurant_id,
-            or_(Cart.status == StatusCart.ACTIVE, Cart.status == StatusCart.SAVED)
-        ).first()
-
-        if cart and cart.items:
-            cart_items_count = sum(item.quantity or 0 for item in cart.items)
+        cart = dao_cus.get_active_cart(user_id, res.restaurant_id)
+        cart_items_count = dao_cus.count_cart_items(cart)
 
     return render_template(
         "/customer/restaurant_detail.html",
@@ -61,9 +62,13 @@ def restaurant_detail(restaurant_id):
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
+<<<<<<< HEAD
         dishes_by_category=dishes_by_category,  # --- NEW
     )
 
+=======
+    )
+>>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
 
 @customer_bp.route("/cart/<int:restaurant_id>")
 def cart(restaurant_id):
@@ -74,25 +79,18 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-    cart = Cart.query.filter_by(cus_id=customer.user_id, res_id=restaurant_id, status=StatusCart.ACTIVE).first()
-    cart_items = []
-    total_price = 0
 
-    if cart:
-        cart_items = cart.items
-        total_price = sum(item.quantity * item.dish.price for item in cart_items)
+    cart = dao_cus.get_active_cart(customer.user_id, restaurant_id)
+    cart_items = cart.items if cart else []
+    total_price = sum(item.quantity * item.dish.price for item in cart_items) if cart_items else 0
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
-
 
 @customer_bp.route("/orders")
 def my_orders():
     uid = session.get("user_id")
     if not uid:
-        # để đúng yêu cầu, không redirect ra template ngoài /customer/*
-        # view list orders chỉ khả dụng khi đã đăng nhập
         abort(403)
-
     if not is_customer(session.get("role")):
         abort(403)
 
@@ -100,14 +98,7 @@ def my_orders():
     per_page = request.args.get("per_page", 10, type=int)
     status_filter = (request.args.get("status") or "").strip().upper()
 
-    q = Order.query.filter_by(customer_id=uid).order_by(Order.created_date.desc())
-    if status_filter in ("PENDING", "PAID", "ACCEPT", "ACCEPTED", "CANCELED", "COMPLETED"):
-        if status_filter == "ACCEPT":
-            status_filter = "ACCEPTED"
-        q = q.filter(Order.status == getattr(StatusOrder, status_filter))
-
-    total = q.count()
-    orders = q.offset((page - 1) * per_page).limit(per_page).all()
+    orders, total = dao_cus.list_customer_orders(uid, status_filter, page, per_page)
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
@@ -116,6 +107,7 @@ def my_orders():
         total=total, total_pages=total_pages, status_filter=status_filter
     )
 
+<<<<<<< HEAD
 
 @customer_bp.route("/order/<int:order_id>/track")
 def order_track(order_id):
@@ -152,19 +144,103 @@ def order_track(order_id):
     )
 
 
+=======
+>>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
 @customer_bp.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
 
-    restaurants = Restaurant.query.limit(50).all()
-    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
-
-    restaurants_with_stars = []
-    for r in restaurants:
-        restaurants_with_stars.append({
-            "restaurant": r,
-            "stars": dao_index.get_star_display(r.rating_point or 0)
-        })
-
+    restaurants = dao_cus.list_top_restaurants(limit=50)
+    restaurants_with_stars = [
+        {"restaurant": r, "stars": dao_cus.get_star_display(r.rating_point or 0)}
+        for r in restaurants
+    ]
     return render_template("customer_home.html", restaurants=restaurants_with_stars)
+
+@customer_bp.route("/notifications/json")
+def notifications_json():
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        return jsonify({"items": [], "unread_count": 0}), 200
+
+    items, unread = dao_cus.list_customer_notifications(uid, limit=30)
+
+    def to_dict(n):
+        return {
+            "id": n.noti_id,
+            "order_id": n.order_id,
+            "message": n.message,
+            "created_at": n.create_at.strftime("%H:%M %d/%m/%Y") if n.create_at else "",
+            "is_read": bool(n.is_read),
+        }
+
+    return jsonify({"items": [to_dict(n) for n in items], "unread_count": unread}), 200
+
+@customer_bp.route("/notifications/open/<int:noti_id>")
+def notifications_open(noti_id):
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        abort(403)
+
+    order_id = dao_cus.open_notification(noti_id, uid)
+    return redirect(url_for("customer.order_track", order_id=order_id))
+
+@customer_bp.route("/notifications/mark-all-read", methods=["POST"])
+def notifications_mark_all_read():
+    uid = session.get("user_id")
+    if not uid or not is_customer(session.get("role")):
+        abort(403)
+
+    dao_cus.mark_all_notifications_read(uid)
+    return jsonify({"ok": True})
+
+@customer_bp.route("/order/<int:order_id>/rate", methods=["POST"])
+def order_rate(order_id):
+    uid = session.get("user_id") or abort(403)
+    order = dao_cus.get_order_for_customer_or_admin(order_id, uid, (session.get("role") or "").upper())
+
+    if not dao_cus.can_rate_order(order, uid):
+        flash("Chỉ có thể đánh giá khi đơn đã giao thành công.", "warning")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    if dao_cus.has_rated(order_id, uid):
+        flash("Bạn đã đánh giá đơn hàng này rồi.", "warning")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    rating = request.form.get("rating", type=int)
+    comment = (request.form.get("comment") or "").strip()
+    if not rating or rating < 1 or rating > 5:
+        flash("Điểm đánh giá không hợp lệ.", "danger")
+        return redirect(url_for("customer.order_track", order_id=order_id))
+
+    dao_cus.add_order_rating(order_id, uid, rating, comment)
+    dao_cus.update_restaurant_rating(order.restaurant_id)
+    flash("Cảm ơn bạn đã đánh giá!", "success")
+    return redirect(url_for("customer.order_track", order_id=order_id))
+
+@customer_bp.route("/order/<int:order_id>/track")
+def order_track(order_id):
+    uid = session.get("user_id") or abort(403)
+    role_upper = (session.get("role") or "").upper()
+    order = dao_cus.get_order_for_customer_or_admin(order_id, uid, role_upper)
+
+    status_str = (getattr(order.status, "value", order.status) or "").upper()
+    active_idx, last_label, is_completed = dao_cus.compute_track_state(status_str)
+
+    rated = OrderRating.query.filter_by(order_id=order_id, customer_id=uid).first()
+    has_rated = bool(rated)
+    user_rating = rated.rating if rated else None
+    user_comment = rated.comment if rated else None
+
+    return render_template(
+        "customer/order_track.html",
+        order=order,
+        active_idx=active_idx,
+        last_label=last_label,
+        status_str=status_str,
+        is_completed=is_completed,
+        has_rated=has_rated,
+        user_rating=user_rating,
+        user_comment=user_comment,
+    )

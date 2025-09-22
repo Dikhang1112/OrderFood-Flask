@@ -47,7 +47,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 
 # ====== Seed/Clear flags ======
-SEED_DB = os.getenv("SEED_DB", "false").lower() == "false"
+SEED_DB = os.getenv("SEED_DB", "false").lower() == "true"
 SEED_CLEAR = os.getenv("SEED_CLEAR", "false").lower() == "true"
 PRESERVE_TRANSACTIONS = os.getenv("PRESERVE_TRANSACTIONS", "true").lower() == "true"  # giữ Order/Payment/Cart
 
@@ -61,10 +61,16 @@ def create_app():
     from OrderFood.google_service import google_auth_bp
     from OrderFood import admin_service
     from OrderFood.customer_service import customer_bp
+    from OrderFood.notifications import noti_bp
+    from OrderFood.chart_owner import bp_stats
+
+    app.register_blueprint(noti_bp)
     app.register_blueprint(vnpay_bp)
     app.register_blueprint(google_auth_bp)
     app.register_blueprint(admin_service.admin_bp)
     app.register_blueprint(customer_bp)
+
+    app.register_blueprint(bp_stats)
 
     # Cloudinary (theo .env)
     cloudinary.config(
@@ -210,7 +216,7 @@ def create_app():
                         restaurant_id=next_restaurant_id,
                         name=res_name,
                         res_owner_id=ro.user_id,
-                        status="PENDING",
+                        status="APPROVED",
                         image="https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg",
                         by_admin_id=a1.user_id,
                         address=random.choice(["Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Da Lat", "Vinh Long"]),
@@ -257,6 +263,79 @@ def create_app():
                 db.session.add_all(categories_to_add)
                 db.session.add_all(dishes_to_add)
                 db.session.commit()
+
+                from datetime import datetime, timedelta
+                from zoneinfo import ZoneInfo
+
+                # ========== FAKE ORDERS + PAYMENTS CHO RESTAURANT_ID = 1 ==========
+                carts_to_add = []
+                cart_items_to_add = []
+                orders_to_add = []
+                payments_to_add = []
+
+                today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+
+                # Lấy danh sách món ăn của restaurant_id = 1
+                dishes_res1 = models.Dish.query.filter_by(res_id=1).all()
+                customers = [c1, c2, c3]
+
+                next_cart_id = 1
+                next_order_id = 1
+                next_payment_id = 1
+
+                for i in range(10):  # 10 orders
+                    customer = random.choice(customers)
+                    dish = random.choice(dishes_res1)
+                    qty = random.randint(1, 3)
+
+                    # Cart
+                    cart = models.Cart(
+                        cus_id=customer.user_id,
+                        res_id=1,
+                        status="CHECKOUT"
+                    )
+                    db.session.add(cart)
+                    db.session.flush()  # lấy cart_id
+                    carts_to_add.append(cart)
+
+                    cart_item = models.CartItem(
+                        cart_id=cart.cart_id,
+                        dish_id=dish.dish_id,
+                        quantity=qty
+                    )
+                    cart_items_to_add.append(cart_item)
+
+                    # Order
+                    order_date = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")) - timedelta(days=random.randint(0, 15))
+                    total_price = dish.price * qty
+
+                    order = models.Order(
+                        customer_id=customer.user_id,
+                        restaurant_id=1,
+                        cart_id=cart.cart_id,
+                        status="COMPLETED",
+                        total_price=total_price,
+                        created_date=order_date
+                    )
+                    db.session.add(order)
+                    db.session.flush()
+                    orders_to_add.append(order)
+
+                    # Payment (amount = total_price * 100 theo VNPay chuẩn)
+                    payment = models.Payment(
+                        order_id=order.order_id,
+                        txn_ref=f"TXN{i + 1:04d}",
+                        amount=int(total_price * 100),
+                        status="PAID",
+                        created_at=order_date
+                    )
+                    payments_to_add.append(payment)
+
+                # Lưu tất cả
+                db.session.add_all(cart_items_to_add)
+                db.session.add_all(payments_to_add)
+                db.session.commit()
+
             # nếu đã có dữ liệu: bỏ qua seeding để bảo toàn giao dịch
         # ---- START SCHEDULER (1 lần, có app context) ----
         global _SCHEDULER_STARTED, scheduler

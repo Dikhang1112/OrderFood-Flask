@@ -1,12 +1,16 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request
 from flask import current_app
+from datetime import datetime
+from sqlalchemy import func, extract
 from sqlalchemy.orm import joinedload
 
 from OrderFood import db
 from OrderFood.dao.restaurant_dao import get_all_restaurants, get_restaurant_by_id
 from OrderFood.email_service import send_restaurant_status_email
-from OrderFood.models import StatusRes, Order, StatusOrder, Customer, Role
+from OrderFood.models import StatusRes, Order, StatusOrder, Customer, Role, Notification, Restaurant
 from sqlalchemy.orm import joinedload
+
+from OrderFood.notifications import push_customer_noti_on_completed
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -154,29 +158,27 @@ def mark_completed(order_id):
 
     order = Order.query.get_or_404(order_id)
 
-    if order.status.value == "ACCEPTED":
-        # Lấy admin_id từ session
-        admin_id = session.get("user_id")   # hoặc session["admin_id"] nếu bạn lưu khác
-
+    # so sánh Enum trực tiếp cho chắc
+    if order.status == StatusOrder.ACCEPTED:
+        admin_id = session.get("user_id")  # id admin đăng nhập
         if not admin_id:
             flash("Không xác định được admin đang đăng nhập!", "danger")
             return redirect(url_for("admin.admin_delivery"))
 
         order.delivery_id = admin_id
         order.status = StatusOrder.COMPLETED
-
-        from OrderFood import db
         db.session.commit()
-        flash(f"Đơn hàng #{order.order_id} đã được giao thành công bởi Admin {admin_id}!", "success")
-    else:
-        flash("Chỉ có thể giao đơn hàng ở trạng thái ACCEPTED", "danger")
+
+        # tạo noti cho CUSTOMER (owner_id = None)
+        push_customer_noti_on_completed(order)
 
     return redirect(url_for("admin.admin_delivery"))
 
 @admin_bp.route("/cancel/<int:order_id>", methods=["POST"])
 def cancel_order(order_id: int):
     """
-     khi admin nhấn hủy -> canceled_by = CUSTOMER.
+    Khi admin nhấn hủy -> canceled_by = CUSTOMER.
+    Gửi noti cho res_owner: "Đơn hàng của bạn bị hủy bởi phía khách hàng."
     """
     # kiểm tra quyền
     role = session.get("role")
@@ -185,10 +187,27 @@ def cancel_order(order_id: int):
 
     order = Order.query.get_or_404(order_id)
 
-    # chỉ cho hủy khi đơn chưa hoàn tất/đã hủy
     if order.status in (StatusOrder.PENDING, StatusOrder.ACCEPTED, StatusOrder.PAID):
         order.status = StatusOrder.CANCELED
-        order.canceled_by = Role.CUSTOMER   # ✅ theo yêu cầu
+        order.canceled_by = Role.CUSTOMER  # ✅
+
+        # ===== Lấy res_owner_id từ bảng restaurant qua join =====
+        res_owner_id = (
+            db.session.query(Restaurant.res_owner_id)
+            .filter(Restaurant.restaurant_id == order.restaurant_id)
+            .scalar()
+        )
+
+        # ===== Tạo noti cho RESTAURANT_OWNER =====
+        if res_owner_id:
+            noti = Notification(
+                order_id=order.order_id,
+                message=f"Đơn hàng #{order.order_id} của bạn bị hủy bởi phía khách hàng.",
+                owner_id=res_owner_id,   # ✅ gửi cho chủ nhà hàng
+                customer_id=None
+            )
+            db.session.add(noti)
+
         db.session.commit()
         flash(f"Đã hủy đơn hàng #{order.order_id}.", "success")
     else:
@@ -196,3 +215,56 @@ def cancel_order(order_id: int):
 
     return redirect(url_for("admin.admin_delivery"))
 
+
+# @admin_bp.route("/api/stats/users-owners")
+# def stats_users_owners():
+#     if not is_admin(session.get("role")):
+#         return jsonify({"error": "forbidden"}), 403
+#
+#     now = datetime.now()
+#     labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
+#     users, owners = [], []
+#
+#     for m in range(1, now.month + 1):
+#         # đếm customer mới
+#         u_count = db.session.query(func.count(Customer.customer_id)) \
+#             .filter(extract("month", .created_date) == m,
+#                     extract("year", Customer.created_date) == now.year) \
+#             .scalar()
+#         # đếm owner mới (từ bảng Restaurant)
+#         o_count = db.session.query(func.count(Restaurant.res_owner_id.distinct())) \
+#             .filter(extract("month", Restaurant.created_date) == m,
+#                     extract("year", Restaurant.created_date) == now.year) \
+#             .scalar()
+#
+#         users.append(u_count or 0)
+#         owners.append(o_count or 0)
+
+    return jsonify({
+        "labels": labels,
+        "users": users,
+        "owners": owners
+    })
+
+
+@admin_bp.route("/api/stats/transactions")
+def stats_transactions():
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    now = datetime.now()
+    labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
+    transactions = []
+
+    for m in range(1, now.month + 1):
+        t_count = db.session.query(func.count(Order.order_id)) \
+            .filter(extract("month", Order.created_date) == m,
+                    extract("year", Order.created_date) == now.year,
+                    Order.status == StatusOrder.COMPLETED) \
+            .scalar()
+        transactions.append(t_count or 0)
+
+    return jsonify({
+        "labels": labels,
+        "transactions": transactions
+    })

@@ -5,7 +5,11 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
+<<<<<<< HEAD
     <orderEntry type="inheritedJdk" />
+=======
+    <orderEntry type="jdk" jdkName="Python 3.12 (OrderFood-Flask)" jdkType="Python SDK" />
+>>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
