@@ -8,15 +8,13 @@
          {% else %}
             {{ url_for('index') }}
          {% endif %}">
+            <img src="{{ url_for('static', filename='img/chef.jpg') }}" alt="Logo"
+                 style="height:45px; width:auto; margin-right:8px; vertical-align:middle;">
             OrderFood
         </a>
-
-
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
             <span class="navbar-toggler-icon"></span>
         </button>
-
-
         <div class="collapse navbar-collapse" id="mynavbar">
             <ul class="navbar-nav me-auto">
                 {% if session.get('role') == 'CUSTOMER' %}
@@ -53,7 +51,8 @@
                             <hr class="dropdown-divider">
                         </li>
                         {% if session.get('role') == 'customer' %}
-                        <li><a class="dropdown-item" href="{{ url_for('customer.customer_home') }}">Trang khách hàng</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('customer.customer_home') }}">Trang khách hàng</a>
+                        </li>
                         {% elif session.get('role') == 'restaurant_owner' %}
                         <li><a class="dropdown-item" href="{{ url_for('owner_home') }}">Trang chủ quán</a></li>
                         {% elif session.get('role') == 'admin' %}
@@ -70,8 +69,7 @@
         </div>
     </div>
 </nav>
-
-
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client/header.css') }}"/>
 
 
 

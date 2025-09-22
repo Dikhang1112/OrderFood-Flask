@@ -20,25 +20,15 @@
 <body>
 
     {% block header %}
-    <header class="bg-dark text-white">
-        <div class="container px-3">
-            {% include 'layout/header.html' %}
-        </div>
+    {% include 'layout/header.html' %}
     </header>
     {% endblock %}
 
     <main class="container px-3 mt-3">
         {% block content required %}{% endblock %}
     </main>
-
-    {# Nếu muốn bật footer #}
-    {#
-    <footer class="bg-light mt-4">
-        <div class="container px-3">
+    <footer>
             {% include 'layout/footer.html' %}
-        </div>
     </footer>
-    #}
-
 </body>
 </html>

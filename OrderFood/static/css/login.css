@@ -43,13 +43,20 @@ span { font-size: 12px; }
 
 .auth-container input,
 .auth-container select {
-  background-color: #eee;
-  border: none;
+  background-color: #fff;
+  border: 1px solid #ffd6d6; /* viền cam nhạt */
   padding: 12px 15px;
   margin: 8px 0;
   width: 100%;
+  border-radius: 6px;
+  transition: border-color 0.2s ease;
 }
-
+.auth-container input:focus,
+.auth-container select:focus {
+  outline: none;
+  border-color: #ff7043; /* cam tươi */
+  box-shadow: 0 0 0 2px rgba(255,112,67,0.2);
+}
 .auth-container a {
   color: #333;
   font-size: 14px;
@@ -59,15 +66,19 @@ span { font-size: 12px; }
 
 .auth-container button {
   border-radius: 20px;
-  border: 1px solid #FF4B2B;
-  background-color: #FF4B2B;
-  color: #FFFFFF;
-  font-size: 12px;
+  border: 1px solid #ff7043;
+  background-color: #ff7043;
+  color: #fff;
+  font-size: 13px;
   font-weight: bold;
   padding: 12px 45px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  transition: transform 80ms ease-in;
+  transition: all 0.2s ease;
+}
+.auth-container button:hover {
+  background-color: #ff8a65;
+  border-color: #ff8a65;
 }
 .auth-container button:active { transform: scale(0.95); }
 .auth-container button:focus { outline: none; }
@@ -84,7 +95,7 @@ span { font-size: 12px; }
               0 10px 10px rgba(0,0,0,0.22);
   position: relative;
   overflow: hidden;
-  width: 768px;
+  width: 860px;
   max-width: 100%;
   min-height: 480px;
 }
@@ -138,7 +149,7 @@ span { font-size: 12px; }
 }
 
 .overlay {
-  background: linear-gradient(to right, #FF4B2B, #FF416C);
+  background: linear-gradient(to right, #da7100f5, #ed3b1d);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;

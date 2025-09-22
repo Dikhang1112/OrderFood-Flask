@@ -1,24 +1,25 @@
 # OrderFood/customer.py
-from flask import Blueprint, render_template, request, session, abort, jsonify,redirect, url_for
-from sqlalchemy.orm import joinedload
+from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for
 
-
-from OrderFood import db, dao_index
+from OrderFood import dao_index
 from OrderFood.models import (
     Restaurant, Dish, Category,
-    Cart, CartItem, Customer,
+    Cart, Customer,
     Order, StatusOrder, StatusCart
 )
 
 customer_bp = Blueprint("customer", __name__)
 
+
 # ============== helpers ==============
 def _role_to_str(r):
     return getattr(r, "value", r)
 
+
 def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
+
 
 # ============== routes render customer/*.html ==============
 
@@ -31,6 +32,13 @@ def restaurant_detail(restaurant_id):
     dishes = Dish.query.filter_by(res_id=restaurant_id).all()
     categories = Category.query.filter_by(res_id=restaurant_id).all()
     stars = dao_index.get_star_display(res.rating_point or 0)
+
+    # --- NEW: gom món theo category_id ---
+    dishes_by_category = {}
+    for c in categories:
+        cid = getattr(c, "category_id", getattr(c, "id", None))
+        if cid is not None:
+            dishes_by_category[cid] = [d for d in dishes if d.category_id == cid]
 
     cart_items_count = 0
     user_id = session.get("user_id")
@@ -49,11 +57,12 @@ def restaurant_detail(restaurant_id):
     return render_template(
         "/customer/restaurant_detail.html",
         res=res,
-        dishes=dishes,
+        dishes=dishes,  # giữ nguyên để không phá chỗ khác
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-    )  # :contentReference[oaicite:4]{index=4}
+        dishes_by_category=dishes_by_category,  # --- NEW
+    )
 
 
 @customer_bp.route("/cart/<int:restaurant_id>")
@@ -121,9 +130,9 @@ def order_track(order_id):
 
     s = getattr(order.status, "value", order.status) or ""
     s = s.upper()
-    is_paid      = (s == "PAID")
-    is_accepted  = (s in ("ACCEPTED", "ACCEPT"))
-    is_canceled  = (s == "CANCELED")
+    is_paid = (s == "PAID")
+    is_accepted = (s in ("ACCEPTED", "ACCEPT"))
+    is_canceled = (s == "CANCELED")
     is_completed = (s == "COMPLETED")
 
     if is_paid:

@@ -1,0 +1,87 @@
+/* ===== Cart page (prefix: ct-) ===== */
+
+/* Container */
+.ct-cart {
+  margin-top: 1rem;
+}
+.ct-title {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+/* Table wrapper */
+.ct-table-wrap {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  overflow: hidden;
+}
+
+/* Table base */
+.ct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.ct-table thead th {
+  background: #f5f5f5;
+  font-weight: 600;
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+.ct-table tbody td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+.ct-table tfoot td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  font-weight: 600;
+}
+
+/* Alignments */
+.ct-col-index { text-align: center; width: 50px; }
+.ct-col-qty { text-align: center; width: 100px; }
+.ct-col-price,
+.ct-col-total { text-align: right; }
+
+/* Hover */
+.ct-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* Actions */
+.ct-actions {
+  text-align: right;
+  margin-top: 1rem;
+  margin-bottom: 50px;
+}
+.ct-btn-pay {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  font-weight: 600;
+  background: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.ct-btn-pay:hover {
+  background: #0056b3;
+}
+.ct-pay-logo {
+  height: 20px;
+  margin-right: 6px;
+}
+
+/* Responsive: bảng cuộn ngang */
+@media (max-width: 768px) {
+  .ct-table-wrap {
+    overflow-x: auto;
+  }
+  .ct-table {
+    min-width: 600px;
+  }
+}

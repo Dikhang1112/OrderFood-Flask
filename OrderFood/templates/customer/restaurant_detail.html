@@ -1,15 +1,14 @@
 {% extends "layout/base.html" %}
 <head>
+    {% block title %}Chi tiết nhà hàng{% endblock %}
 </head>
-{% block title %}Chi tiết nhà hàng{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <p>{{res.restaurant_id}}</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client/restaurant_detail.css') }}"/>
+<div class="container mt-4 rd-container">
     {% if res %}
     <!-- Thông tin nhà hàng -->
-    <div class="row mb-4">
-        <div class="col-md-6 pe-1" style="width:100%; height:300px; max-width:480px; margin:auto;">
+    <div class="row mb-4 rd-header">
+        <div class="col-md-6 pe-1 rd-header-img" style="width:100%; height:300px; max-width:480px; margin:auto;">
             {% if res.image %}
             <img src="{{ res.image }}" alt="{{ res.name }}"
                  class="img-fluid rounded shadow-sm"
@@ -22,109 +21,94 @@
             {% endif %}
         </div>
 
-        <div class="col-md-6 ps-1 d-flex flex-column justify-content-center">
-            <h3 class="mb-2">{{ res.name }}</h3>
-            <p class="mb-1"><strong>Địa chỉ:</strong> {{ res.address }}</p>
+        <div class="col-md-6 ps-1 d-flex flex-column justify-content-center rd-header-info">
+            <h3 class="mb-2 rd-name">{{ res.name }}</h3>
+            <p class="mb-1 rd-address"><strong>Địa chỉ:</strong> {{ res.address }}</p>
 
-            <div class="mb-2">
-                {% for _ in range(stars.full) %}
-                <i class="fas fa-star text-warning"></i>
-                {% endfor %}
-                {% if stars.half %}
-                <i class="fas fa-star-half-alt text-warning"></i>
-                {% endif %}
-                {% for _ in range(stars.empty) %}
-                <i class="far fa-star text-secondary"></i>
-                {% endfor %}
+            <div class="mb-2 rd-stars">
+                {% for _ in range(stars.full) %}<i class="fas fa-star text-warning"></i>{% endfor %}
+                {% if stars.half %}<i class="fas fa-star-half-alt text-warning"></i>{% endif %}
+                {% for _ in range(stars.empty) %}<i class="far fa-star text-secondary"></i>{% endfor %}
             </div>
-            <p><strong>Thời gian mở cửa:</strong> {{ res.open_hour }} - {{ res.close_hour }}</p>
+
+            <p class="rd-openhour"><strong>Thời gian mở cửa:</strong> {{ res.open_hour }} - {{ res.close_hour }}</p>
         </div>
     </div>
     <hr>
-    <!-- Thực đơn -->
-    <div class="row bg-light p-3 rounded align-items-stretch">
-        <div class="col-md-3 h-100">
-            <ul class="list-group">
-                {% for category in categories %}
-                <li class="list-group-item">
-                    <a href="#cate{{ category.id }}" class="text-decoration-none">{{ category.name }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
 
-        <!-- Danh sách món ăn -->
-        <div class="col-md-9 h-100" style="max-width: 750px">
-            <div class="border p-3 bg-white h-100 rounded">
-                {% if dishes %}
-                {% for category in categories %}
-                <h5 id="cate{{ category.id }}" style="margin-top:-0.5rem;">{{ category.name }} </h5>
-                <div class="row">
-                    {% for dish in dishes %}
-                    {% if dish.category_id == category.category_id %}
-                    <div class="col-12 mb-3">   <!-- 1 món = 1 dòng -->
-                        <div class="card h-100 shadow-sm">
-                            <div class="row g-0">
-                                <!-- Hình ảnh món -->
-                                <div class="col-3">
-                                    <img src="{{ dish.image or 'https://via.placeholder.com/120x120?text=No+Image' }}"
-                                         class="img-fluid rounded-start h-100"
-                                         alt="{{ dish.name }}" style="height:120px; object-fit:cover;">
-                                </div>
-                                <!-- Nội dung món -->
-                                <div class="col-9">
-                                    <div class="card-body p-2 row">
-                                        <div class="col-10 d-flex flex-column">
-                                            <h6 class="card-title text-truncate" style="max-width:100%;"
-                                                title="{{ dish.name }}">{{ dish.name }}</h6>
-                                            <p class="card-text small text-muted flex-grow-1"
-                                               style="max-width:100%;
-                                                overflow:hidden;
-                                                text-overflow:ellipsis;
-                                                display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">
+    <!-- Menu dạng lưới: mỗi category = một cột -->
+    <div class="rd-menu bg-light p-3 rounded">
+        <div class="row rd-menu-grid g-3">
+            {% for category in categories %}
+            {% set cid = category.category_id if category.category_id is defined else category.id %}
+            {% set cate_dishes = dishes_by_category.get(cid, []) %}
+
+            <div class="col-12 col-md-6 col-lg-4 rd-category-col">
+                <h5 id="cate{{ cid }}" class="rd-category-title">{{ category.name }}</h5>
+
+                <div class="row g-3">
+                    {% if cate_dishes and cate_dishes|length > 0 %}
+                        {% for dish in cate_dishes %}
+                        <div class="col-12 rd-dish-wrap">
+                            <div class="card h-100 shadow-sm rd-dish-card">
+                                <div class="row g-0 align-items-stretch">
+                                    <!-- Ảnh món -->
+                                    <div class="col-4 rd-dish-img">
+                                        <img src="{{ dish.image or 'https://via.placeholder.com/120x120?text=No+Image' }}"
+                                             class="img-fluid rounded-start w-100"
+                                             alt="{{ dish.name }}"
+                                             style="height:120px; object-fit:cover;">
+                                    </div>
+
+                                    <!-- Nội dung món -->
+                                    <div class="col-8 rd-dish-info">
+                                        <div class="card-body p-2 d-flex flex-column h-100">
+                                            <h6 class="card-title text-truncate rd-dish-name" title="{{ dish.name }}">
+                                                {{ dish.name }}
+                                            </h6>
+                                            <p class="card-text small text-muted rd-dish-note"
+                                               style="max-width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">
                                                 {{ dish.note }}
                                             </p>
-                                            <span class="fw-bold text-danger mt-auto">{{ dish.price }} đ</span>
-                                        </div>
-                                        <div class="col-2 d-flex align-items-center justify-content-end">
-                                            <a href="javascript:;"
-                                               class="btn btn-success btn-sm"
-                                            onclick="addToCart({{dish.dish_id}}, {{res.restaurant_id}})"> + </a>
+
+                                            <div class="d-flex align-items-center justify-content-between mt-auto">
+                                                <span class="fw-bold text-danger rd-dish-price">{{ dish.price }} đ</span>
+                                                <a href="javascript:;" class="btn btn-success btn-sm rd-add-btn"
+                                                   onclick="addToCart({{dish.dish_id}}, {{res.restaurant_id}})"> + </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-
                             </div>
                         </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-12">
+                            <p class="text-muted small mb-0">Chưa có món trong mục này.</p>
+                        </div>
                     {% endif %}
-                    {% endfor %}
                 </div>
-                {% endfor %}
-                {% else %}
-                <p>Nhà hàng này chưa có món ăn nào.</p>
-                {% endif %}
             </div>
+            {% endfor %}
         </div>
     </div>
     {% else %}
     <p class="text-center">Không có nhà hàng thỏa yêu cầu</p>
     {% endif %}
-    <p>{{cart_items_count}}</p>
 </div>
 
-    <a href="/cart/{{ res.restaurant_id }}" id="mini_cart"
-       class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow  {% if cart_items_count <= 0 %}d-none{% endif %}"
-       style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;">
-        <i class="fas fa-shopping-cart fa-lg text-white"></i>
-        <!-- Badge số lượng -->
-        <span id="cart-count"
-              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger  {% if cart_items_count <= 0 %}d-none{% endif %}">
-            {{cart_items_count}}        </span>
-    </a>
-
-
+<!-- Nút mini cart -->
+<a href="/cart/{{ res.restaurant_id }}" id="mini_cart"
+   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow
+          {% if cart_items_count <= 0 %}d-none{% endif %}"
+   style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;">
+    <i class="fas fa-shopping-cart fa-lg text-white"></i>
+    <span id="cart-count"
+          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger
+                 {% if cart_items_count <= 0 %}d-none{% endif %}">
+        {{cart_items_count}}
+    </span>
+</a>
 
 <script src="{{ url_for('static', filename='js/customer/cart.js') }}"></script>
 {% endblock %}

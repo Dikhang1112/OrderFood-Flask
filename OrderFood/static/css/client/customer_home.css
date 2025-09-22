@@ -1,0 +1,171 @@
+/* customer_home.css — ShopeeFood-ish red tone, prefix ch- */
+
+/* ===== Palette ===== */
+:root{
+  --brand-700:#ff3d2e;   /* bright red */
+  --brand-600:#ff5533;   /* red-orange */
+  --brand-500:#ff6a3d;   /* warm orange */
+  --brand:#ff3d2e;       /* primary tone */
+  --text:#222;
+  --muted:#6c757d;
+  --bg-soft:#f7f9fc;
+  --card-bg:#fff;
+  --radius:16px;
+}
+
+/* ===== Banner carousel ===== */
+.ch-banner-carousel{
+  max-height: 300px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+/* Giữ tương thích banner.js cũ và mới */
+.banner-img,
+.ch-banner-img {
+  width: 100%;
+  height: 240px;
+  object-fit: fill;
+  display: block;
+}
+
+.carousel-indicators [data-bs-target]{
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background-color: rgba(255,255,255,.75);
+  border: 0;
+}
+.carousel-indicators .active{
+  background-color: #fff;
+}
+.carousel-control-prev-icon,
+.carousel-control-next-icon{
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+}
+
+/* ===== Title underline ===== */
+.ch-title-underline{
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-700), rgba(255,61,46,0));
+  flex:1;
+  border-radius: 3px;
+  opacity:.7;
+}
+
+/* ===== Cards ===== */
+.ch-restaurant-card{
+  border: none;
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform .25s ease, box-shadow .25s ease;
+  background: var(--card-bg);
+}
+.hover-lift:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,.08);
+}
+.ch-img-wrap{
+  width:100%;
+  aspect-ratio: 16/9;
+  overflow:hidden;
+  background: var(--bg-soft);
+}
+.ch-img-wrap img{
+  width:100%; height:100%; object-fit:cover;
+  transform: scale(1.02);
+  transition: transform .5s ease;
+}
+.ch-restaurant-card:hover .ch-img-wrap img{ transform: scale(1.06); }
+
+.card-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.ch-card-text {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+
+/* ===== Badges inline cùng info ===== */
+.ch-badges-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.ch-chip{
+  font-weight:700;
+  letter-spacing:.2px;
+  padding: .25rem .5rem;
+  font-size: .75rem;
+  border-radius: 999px;
+}
+
+/* ===== Rating ===== */
+.ch-rating i{ margin-right: 2px; }
+
+/* ===== Buttons ===== */
+.ch-btn-primary {
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+  color: #fff;
+  font-weight: 600;
+}
+.ch-btn-primary:hover {
+  background: #fff;
+  color: var(--brand-700);
+  border-color: var(--brand-700);
+  box-shadow: 0 0 0 0.25rem rgba(255,61,46,.25);
+}
+
+.ch-btn-detail{
+  border-radius: 999px;
+  padding: .55rem 1.1rem;
+  font-weight:700;
+  letter-spacing:.2px;
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+  color: #fff;
+}
+.ch-btn-detail:hover{
+  background: #fff;
+  color: var(--brand-700);
+  border-color: var(--brand-700);
+  box-shadow: 0 6px 16px rgba(255, 61, 46, .25);
+}
+
+/* ===== Pulse effect ===== */
+.pulse-on-hover{ position:relative; }
+.pulse-on-hover::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:inherit;
+  box-shadow: 0 0 0 0 rgba(255,61,46,.45);
+  opacity:0; pointer-events:none;
+}
+.pulse-on-hover:hover::after{
+  animation: pulse-red 1s ease-out 1;
+  opacity:1;
+}
+@keyframes pulse-red{
+  0% { box-shadow:0 0 0 0 rgba(255,61,46,.45); }
+  100%{ box-shadow:0 0 0 18px rgba(255,61,46,0); }
+}
+/* ===== Pagination ===== */
+.pagination .page-link {
+  color: #ff7043;              /* chữ cam */
+  font-weight: 600;
+  border: 1px solid #ffab91;   /* viền cam nhạt */
+  transition: all 0.2s ease;
+}
+.pagination .page-link:hover {
+  color: #fff;
+  background-color: #ff7043;
+  border-color: #ff7043;
+}
+.pagination .page-item.active .page-link {
+  background-color: #ff7043;
+  border-color: #ff7043;
+  color: #fff;
+}

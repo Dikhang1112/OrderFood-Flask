@@ -1,4 +1,4 @@
-{% extends "layout/base.html" %}
+\{% extends "layout/base.html" %}
 {% block title %}Đăng nhập{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
@@ -11,14 +11,11 @@
             <form action="{{ url_for('register') }}" method="POST">
                 <h1>Create Account</h1>
                 <div class="social-container">
-                    <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
                      <a href="{{ url_for('google_auth.login_google') }}" class="social" title="Sign in with Google">
                         <i class="fa-brands fa-google"></i>
                     </a>
-                   <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
                 </div>
-                <span>or use your email for registration</span>
-
+                <span>Use your email for registration</span>
                 <input type="text" name="name" placeholder="Name" required/>
                 <input type="email" name="email" placeholder="Email" required/>
                 <input type="password" name="password" placeholder="Password" required/>
@@ -42,7 +39,7 @@
                     </a>
 
                 </div>
-                <span>or use your account</span>
+                <span>Sign In With Google</span>
 
                 <input type="email" name="email" placeholder="Email" required/>
                 <input type="password" name="password" placeholder="Password" required/>
