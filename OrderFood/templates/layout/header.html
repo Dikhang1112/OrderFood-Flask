@@ -21,7 +21,7 @@
 =======
            href="{% set r=(session.get('role') or '').lower() %}
                   {% if r == 'restaurant_owner' %}
-                    {{ url_for('owner_home') }}
+                    {{ url_for('owner.owner_home') }}
                   {% elif r == 'customer' %}
                     {{ url_for('index') }}
                   {% else %}
@@ -43,8 +43,9 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Trang chủ</a></li>
                 {% elif r == 'restaurant_owner' %}
                     {% if restaurant and restaurant.status.name == "APPROVED" %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('get_menu') }}">Chỉnh sửa món ăn</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_orders') }}">Quản lý đơn hàng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('owner.get_menu') }}">Chỉnh sửa món ăn</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('owner.manage_orders') }}">Quản lý đơn hàng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('owner.manage_restaurant') }}">Quản lý nhà hàng</a></li>
                     {% else %}
                     <li class="nav-item"><span class="nav-link text-muted">Nhà hàng đang chờ duyệt...</span></li>
                     {% endif %}
@@ -116,7 +117,7 @@
 >>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
                         <li><a class="dropdown-item" href="{{ url_for('customer.my_orders') }}">Đơn của tôi</a></li>
                         {% elif r == 'restaurant_owner' %}
-                        <li><a class="dropdown-item" href="{{ url_for('owner_home') }}">Trang chủ quán</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('owner.owner_home') }}">Trang chủ quán</a></li>
                         {% elif r == 'admin' %}
                         <li><a class="dropdown-item" href="{{ url_for('admin.admin_home') }}">Trang admin</a></li>
                         {% endif %}
@@ -147,9 +148,8 @@
 <script>
     window.APP_ROLE = "{{ (session.get('role') or '')|lower }}";
     window.APP_URLS = {
-      ownerOrders: "{{ url_for('manage_orders') if r=='restaurant_owner' else '' }}",
+      ownerOrders: "{{ url_for('owner.manage_orders') if r=='restaurant_owner' else '' }}",
       customerTrack0: "{{ url_for('customer.order_track', order_id=0) if r=='customer' else '' }}"
     };
 </script>
 <script src="{{ url_for('static', filename='js/customer/noti.js') }}"></script>
-

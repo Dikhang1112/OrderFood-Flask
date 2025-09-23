@@ -1,0 +1,53 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Quản lý Nhà hàng{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>Quản lý Nhà hàng</h3>
+    <div class="card p-3 shadow-sm">
+        <input type="hidden" id="restaurant-id" value="{{ restaurant.restaurant_id }}">
+
+        <div class="mb-3">
+            <label class="form-label">Tên nhà hàng</label>
+            <input type="text" class="form-control" id="name" value="{{ restaurant.name }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Địa chỉ</label>
+            <input type="text" class="form-control" id="address" value="{{ restaurant.address }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Mã số thuế</label>
+            <input type="text" class="form-control" id="tax" value="{{ owner.tax }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Rating</label>
+            <input type="text" class="form-control" value="{{ restaurant.rating_point }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Thời gian mở cửa</label>
+            <input type="time" class="form-control" id="open-hour" value="{{ restaurant.open_hour }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Thời gian đóng cửa</label>
+            <input type="time" class="form-control" id="close-hour" value="{{ restaurant.close_hour }}">
+        </div>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="toggle-open" {% if restaurant.is_open %}checked{% endif %}>
+            <label class="form-check-label" id="status-label">
+                {% if restaurant.is_open %}Mở cửa{% else %}Đóng cửa{% endif %}
+            </label>
+        </div>
+
+        <button class="btn btn-primary" id="save-btn">Lưu thay đổi</button>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/owner/manage_res.js') }}"></script>
+{% endblock %}

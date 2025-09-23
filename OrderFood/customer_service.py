@@ -1,13 +1,5 @@
 # OrderFood/customer.py
-<<<<<<< HEAD
-from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for
 
-from OrderFood import dao_index
-from OrderFood.models import (
-    Restaurant, Dish, Category,
-    Cart, Customer,
-    Order, StatusOrder, StatusCart
-=======
 from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for, flash
 
 from OrderFood.dao import customer_dao as dao_cus
@@ -15,7 +7,6 @@ from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
     Order, StatusOrder, StatusCart, Notification, OrderRating
->>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -29,6 +20,21 @@ def _role_to_str(r):
 def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
+
+
+from datetime import datetime
+
+def is_restaurant_open(restaurant):
+    if not restaurant.is_open:
+        return False
+    try:
+        open_time = datetime.strptime(restaurant.open_hour, "%H:%M").time()
+        close_time = datetime.strptime(restaurant.close_hour, "%H:%M").time()
+        now = datetime.now().time()
+        return open_time <= now <= close_time
+    except Exception as e:
+        # Trường hợp open_hour/close_hour không hợp lệ
+        return False
 
 
 # ============== routes render customer/*.html ==============
@@ -51,6 +57,7 @@ def restaurant_detail(restaurant_id):
 
     cart_items_count = 0
     user_id = session.get("user_id")
+    is_open = is_restaurant_open(res)
     if user_id:
         cart = dao_cus.get_active_cart(user_id, res.restaurant_id)
         cart_items_count = dao_cus.count_cart_items(cart)
@@ -62,13 +69,10 @@ def restaurant_detail(restaurant_id):
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-<<<<<<< HEAD
         dishes_by_category=dishes_by_category,  # --- NEW
+        is_open=is_open
     )
 
-=======
-    )
->>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
 
 @customer_bp.route("/cart/<int:restaurant_id>")
 def cart(restaurant_id):
@@ -83,8 +87,9 @@ def cart(restaurant_id):
     cart = dao_cus.get_active_cart(customer.user_id, restaurant_id)
     cart_items = cart.items if cart else []
     total_price = sum(item.quantity * item.dish.price for item in cart_items) if cart_items else 0
-
-    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+    is_open = is_restaurant_open(Restaurant.query.filter_by(restaurant_id=restaurant_id).first())
+    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price
+                           , is_open=is_open)
 
 @customer_bp.route("/orders")
 def my_orders():
@@ -107,7 +112,7 @@ def my_orders():
         total=total, total_pages=total_pages, status_filter=status_filter
     )
 
-<<<<<<< HEAD
+
 
 @customer_bp.route("/order/<int:order_id>/track")
 def order_track(order_id):
@@ -144,8 +149,7 @@ def order_track(order_id):
     )
 
 
-=======
->>>>>>> cffd1712d498615e18004bbbf9ec0f93949fdd08
+
 @customer_bp.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
@@ -244,3 +248,5 @@ def order_track(order_id):
         user_rating=user_rating,
         user_comment=user_comment,
     )
+
+

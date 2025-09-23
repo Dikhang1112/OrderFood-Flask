@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
-    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
+    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("admin@123"),
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "false").lower() == "true"
 
@@ -63,12 +63,14 @@ def create_app():
     from OrderFood.customer_service import customer_bp
     from OrderFood.notifications import noti_bp
     from OrderFood.chart_owner import bp_stats
+    from OrderFood.owner import owner_bp
 
     app.register_blueprint(noti_bp)
     app.register_blueprint(vnpay_bp)
     app.register_blueprint(google_auth_bp)
     app.register_blueprint(admin_service.admin_bp)
     app.register_blueprint(customer_bp)
+    app.register_blueprint(owner_bp)
 
     app.register_blueprint(bp_stats)
 
@@ -221,6 +223,7 @@ def create_app():
                         by_admin_id=a1.user_id,
                         address=random.choice(["Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Da Lat", "Vinh Long"]),
                         rating_point=round(random.uniform(1.0, 5.0), 1),
+
                     )
                     restaurants_to_add.append(res)
 

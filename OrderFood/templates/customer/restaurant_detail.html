@@ -1,14 +1,14 @@
 {% extends "layout/base.html" %}
 <head>
-    {% block title %}Chi tiết nhà hàng{% endblock %}
 </head>
+{% block title %}Chi tiết nhà hàng{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/client/restaurant_detail.css') }}"/>
-<div class="container mt-4 rd-container">
+<div class="container mt-4">
     {% if res %}
     <!-- Thông tin nhà hàng -->
-    <div class="row mb-4 rd-header">
-        <div class="col-md-6 pe-1 rd-header-img" style="width:100%; height:300px; max-width:480px; margin:auto;">
+    <div class="row mb-4">
+        <div class="col-md-6 pe-1" style="width:100%; height:300px; max-width:480px; margin:auto;">
             {% if res.image %}
             <img src="{{ res.image }}" alt="{{ res.name }}"
                  class="img-fluid rounded shadow-sm"
@@ -21,75 +21,110 @@
             {% endif %}
         </div>
 
-        <div class="col-md-6 ps-1 d-flex flex-column justify-content-center rd-header-info">
-            <h3 class="mb-2 rd-name">{{ res.name }}</h3>
-            <p class="mb-1 rd-address"><strong>Địa chỉ:</strong> {{ res.address }}</p>
+        <div class="col-md-6 ps-1 d-flex flex-column justify-content-center">
+            <h3 class="mb-2">{{ res.name }}</h3>
+            <p class="mb-1"><strong>Địa chỉ:</strong> {{ res.address }}</p>
 
-            <div class="mb-2 rd-stars">
-                {% for _ in range(stars.full) %}<i class="fas fa-star text-warning"></i>{% endfor %}
-                {% if stars.half %}<i class="fas fa-star-half-alt text-warning"></i>{% endif %}
-                {% for _ in range(stars.empty) %}<i class="far fa-star text-secondary"></i>{% endfor %}
+            <div class="mb-2">
+                {% for _ in range(stars.full) %}
+                <i class="fas fa-star text-warning"></i>
+                {% endfor %}
+                {% if stars.half %}
+                <i class="fas fa-star-half-alt text-warning"></i>
+                {% endif %}
+                {% for _ in range(stars.empty) %}
+                <i class="far fa-star text-secondary"></i>
+                {% endfor %}
             </div>
-
-            <p class="rd-openhour"><strong>Thời gian mở cửa:</strong> {{ res.open_hour }} - {{ res.close_hour }}</p>
+            <p><strong>Thời gian mở cửa:</strong> {{ res.open_hour }} - {{ res.close_hour }}</p>
         </div>
+
+        <p>
+            <strong>Trạng thái:</strong>
+            {% if is_open %}
+            <span class="text-success">Mở cửa</span>
+            {% else %}
+            <span class="text-danger">Đang đóng</span>
+            {% endif %}
+        </p>
+
     </div>
     <hr>
+    <!-- Thực đơn -->
+    <div class="row bg-light p-3 rounded align-items-stretch">
+        <div class="col-md-3 h-100">
+            <ul class="list-group">
+                {% for category in categories %}
+                <li class="list-group-item">
+                    <a href="#cate{{ category.id }}" class="text-decoration-none">{{ category.name }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
 
-    <!-- Menu dạng lưới: mỗi category = một cột -->
-    <div class="rd-menu bg-light p-3 rounded">
-        <div class="row rd-menu-grid g-3">
-            {% for category in categories %}
-            {% set cid = category.category_id if category.category_id is defined else category.id %}
-            {% set cate_dishes = dishes_by_category.get(cid, []) %}
-
-            <div class="col-12 col-md-6 col-lg-4 rd-category-col">
-                <h5 id="cate{{ cid }}" class="rd-category-title">{{ category.name }}</h5>
-
-                <div class="row g-3">
-                    {% if cate_dishes and cate_dishes|length > 0 %}
-                        {% for dish in cate_dishes %}
-                        <div class="col-12 rd-dish-wrap">
-                            <div class="card h-100 shadow-sm rd-dish-card">
-                                <div class="row g-0 align-items-stretch">
-                                    <!-- Ảnh món -->
-                                    <div class="col-4 rd-dish-img">
-                                        <img src="{{ dish.image or 'https://via.placeholder.com/120x120?text=No+Image' }}"
-                                             class="img-fluid rounded-start w-100"
-                                             alt="{{ dish.name }}"
-                                             style="height:120px; object-fit:cover;">
-                                    </div>
-
-                                    <!-- Nội dung món -->
-                                    <div class="col-8 rd-dish-info">
-                                        <div class="card-body p-2 d-flex flex-column h-100">
-                                            <h6 class="card-title text-truncate rd-dish-name" title="{{ dish.name }}">
-                                                {{ dish.name }}
-                                            </h6>
-                                            <p class="card-text small text-muted rd-dish-note"
-                                               style="max-width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">
+        <!-- Danh sách món ăn -->
+        <div class="col-md-9 h-100" style="max-width: 750px">
+            <div class="border p-3 bg-white h-100 rounded">
+                {% if dishes %}
+                {% for category in categories %}
+                <h5 id="cate{{ category.id }}" style="margin-top:-0.5rem;">{{ category.name }} </h5>
+                <div class="row">
+                    {% for dish in dishes %}
+                    {% if dish.category_id == category.category_id %}
+                    <div class="col-12 mb-3">   <!-- 1 món = 1 dòng -->
+                        <div class="card h-100 shadow-sm">
+                            <div class="row g-0">
+                                <!-- Hình ảnh món -->
+                                <div class="col-3">
+                                    <img src="{{ dish.image or 'https://via.placeholder.com/120x120?text=No+Image' }}"
+                                         class="img-fluid rounded-start h-100"
+                                         alt="{{ dish.name }}" style="height:120px; object-fit:cover;">
+                                </div>
+                                <!-- Nội dung món -->
+                                <div class="col-9">
+                                    <div class="card-body p-2 row">
+                                        <div class="col-10 d-flex flex-column">
+                                            <h6 class="card-title text-truncate" style="max-width:100%;"
+                                                title="{{ dish.name }}">{{ dish.name }}</h6>
+                                            <p class="card-text small text-muted flex-grow-1"
+                                               style="max-width:100%;
+                                                overflow:hidden;
+                                                text-overflow:ellipsis;
+                                                display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;">
                                                 {{ dish.note }}
                                             </p>
+                                            <span class="fw-bold text-danger mt-auto">{{ dish.price }} đ</span>
+                                        </div>
+                                        <div class="col-2 d-flex align-items-center justify-content-end">
+                                            <a href="#" class="btn btn-success btn-sm add-dish-btn"
+                                               data-id="{{ dish.dish_id }}"
+                                               data-name="{{ dish.name|e }}"
+                                               data-image="{{ dish.image|default('https://via.placeholder.com/120x120?text=No+Image')|e }}"
+                                               data-price="{{ dish.price }}"
+                                               data-note="{{ dish.note|default('')|e }}"
+                                               data-res="{{ res.restaurant_id }}">
+                                                +
+                                            </a>
 
-                                            <div class="d-flex align-items-center justify-content-between mt-auto">
-                                                <span class="fw-bold text-danger rd-dish-price">{{ dish.price }} đ</span>
-                                                <a href="javascript:;" class="btn btn-success btn-sm rd-add-btn"
-                                                   onclick="addToCart({{dish.dish_id}}, {{res.restaurant_id}})"> + </a>
-                                            </div>
+
+                                            <!--                                            <button onclick="openDishModal(1, 'Phở bò', '', 50000, 'Ngon lắm', 1)">Test +</button>-->
+
                                         </div>
                                     </div>
                                 </div>
+
+
                             </div>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="col-12">
-                            <p class="text-muted small mb-0">Chưa có món trong mục này.</p>
-                        </div>
+                    </div>
                     {% endif %}
+                    {% endfor %}
                 </div>
+                {% endfor %}
+                {% else %}
+                <p>Nhà hàng này chưa có món ăn nào.</p>
+                {% endif %}
             </div>
-            {% endfor %}
         </div>
     </div>
     {% else %}
@@ -97,18 +132,56 @@
     {% endif %}
 </div>
 
-<!-- Nút mini cart -->
 <a href="/cart/{{ res.restaurant_id }}" id="mini_cart"
-   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow
-          {% if cart_items_count <= 0 %}d-none{% endif %}"
+   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow  {% if cart_items_count <= 0 %}d-none{% endif %}"
    style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;">
     <i class="fas fa-shopping-cart fa-lg text-white"></i>
+    <!-- Badge số lượng -->
     <span id="cart-count"
-          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger
-                 {% if cart_items_count <= 0 %}d-none{% endif %}">
-        {{cart_items_count}}
-    </span>
+          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger  {% if cart_items_count <= 0 %}d-none{% endif %}">
+            {{cart_items_count}}        </span>
 </a>
 
+<!-- === Popup form chi tiết món ăn === -->
+<div class="modal fade" id="dishModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dishModalTitle">Chi tiết món ăn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex">
+                <img id="dishModalImage" src="" alt="" class="img-fluid me-3"
+                     style="width:120px; height:120px; object-fit:cover;">
+                <div class="flex-grow-1">
+                    <p><strong>Giá:</strong> <span id="dishModalPrice"></span> đ</p>
+                    <p id="dishModalNote"></p>
+                    <div class="mb-2">
+                        <label>Số lượng:</label>
+                        <input type="number" id="dishModalQty" value="1" min="1" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label>Ghi chú:</label>
+                        <input type="text" id="dishModalUserNote" class="form-control" placeholder="Nhập ghi chú...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" id="dishModalAddBtn">Thêm vào giỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="{{ url_for('static', filename='js/customer/cart.js') }}"></script>
+
+<style>
+    .btn.disabled {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+</style>
+
 {% endblock %}
