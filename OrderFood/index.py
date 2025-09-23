@@ -2,8 +2,11 @@
 import os, traceback
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from OrderFood import app
+from OrderFood import app, db
 from OrderFood.dao import *
+from OrderFood.dao_index import get_restaurants_by_name, get_restaurants_by_dishes_name, get_star_display, \
+    get_user_by_email, create_user, get_active_cart, add_cart_item, count_cart_items
+from OrderFood.models import Restaurant, Customer, Cart, StatusCart
 
 # --- Helpers ---
 ENUM_UPPERCASE = True
@@ -22,7 +25,7 @@ def is_owner(role: str) -> bool:
 
 # --- Routes ---
 @app.route("/")
-def index_route():
+def index():
     keyword = (request.args.get("search") or "").strip()
     rating_filter = request.args.get("rating")
     location_filter = request.args.get("location")
@@ -94,7 +97,7 @@ def register():
         flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
         if is_owner(user.role):
             return redirect(url_for("owner.owner_home"))
-        return redirect(url_for("index_route"))
+        return redirect(url_for("index"))
 
     return render_template("auth.html")
 
@@ -116,7 +119,7 @@ def login():
 
         if is_owner(user.role):
             return redirect(url_for("owner.owner_home"))
-        return redirect(url_for("index_route"))
+        return redirect(url_for("index"))
 
     return render_template("auth.html")
 
@@ -124,7 +127,7 @@ def login():
 def logout():
     session.clear()
     flash("Đã đăng xuất", "info")
-    return redirect(url_for("index_route"))
+    return redirect(url_for("index"))
 
 # --- Cart API ---
 @app.route('/api/cart', methods=['POST'])
@@ -177,3 +180,7 @@ def cart_route(restaurant_id):
     total_price = sum(item.quantity * item.dish.price for item in cart_items) if cart_items else 0
 
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+# deploy thì bỏ nguyên cái if này đi
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

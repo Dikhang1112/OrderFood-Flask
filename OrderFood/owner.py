@@ -1,6 +1,7 @@
 # OrderFood/owner.py
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
-from OrderFood.models import User, Restaurant, Dish, Category, StatusOrder, StatusCart, Refund, Payment, StatusRefund, Role, Order
+from OrderFood.models import User, Restaurant, Dish, Category, StatusOrder, StatusCart, Refund, Payment, StatusRefund, \
+    Role, Order, StatusRes
 from OrderFood.dao_index import *
 from OrderFood import db
 from datetime import datetime
@@ -296,3 +297,52 @@ def update_restaurant():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
+@owner_bp.route("/res_register", methods=["GET", "POST"])
+def res_register():
+    if request.method == "GET":
+        return render_template("owner/res_register.html")
+
+    if request.method == "POST":
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"success": False, "error": "Chưa đăng nhập"}), 401
+
+        # Check đã có restaurant chưa
+        existing = Restaurant.query.filter_by(res_owner_id=user_id).first()
+        if existing:
+            return jsonify({"success": False, "error": "Bạn đã đăng ký nhà hàng rồi"}), 400
+
+        name = request.form.get("name")
+        address = request.form.get("address")
+        open_hour = request.form.get("open_hour")
+        close_hour = request.form.get("close_hour")
+        tax = request.form.get("tax")
+        image_url = request.form.get("image_url")
+
+        if not all([name, address, open_hour, close_hour, tax]):
+            return jsonify({"success": False, "error": "Thiếu thông tin bắt buộc"}), 400
+
+        # cập nhật tax vào bảng restaurant_owner
+        owner = RestaurantOwner.query.get(user_id)
+        if owner:
+            owner.tax = tax
+        else:
+            owner = RestaurantOwner(user_id=user_id, tax=tax)
+            db.session.add(owner)
+
+        # tạo restaurant
+        restaurant = Restaurant(
+            name=name,
+            address=address,
+            open_hour=open_hour,
+            close_hour=close_hour,
+            image=image_url,
+            res_owner_id=user_id,
+            status=StatusRes.PENDING
+        )
+
+        db.session.add(restaurant)
+        db.session.commit()
+
+        return jsonify({"success": True, "restaurant_id": restaurant.restaurant_id})

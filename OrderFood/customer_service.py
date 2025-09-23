@@ -114,39 +114,7 @@ def my_orders():
 
 
 
-@customer_bp.route("/order/<int:order_id>/track")
-def order_track(order_id):
-    uid = session.get("user_id")
-    if not uid:
-        abort(403)
 
-    order = Order.query.get_or_404(order_id)
-    # chỉ chủ đơn (hoặc admin) mới xem được
-    if order.customer_id != uid and (session.get("role") or "").upper() != "ADMIN":
-        abort(403)
-
-    s = getattr(order.status, "value", order.status) or ""
-    s = s.upper()
-    is_paid = (s == "PAID")
-    is_accepted = (s in ("ACCEPTED", "ACCEPT"))
-    is_canceled = (s == "CANCELED")
-    is_completed = (s == "COMPLETED")
-
-    if is_paid:
-        active_idx = 0
-    elif is_accepted:
-        active_idx = 1
-    elif is_canceled or is_completed:
-        active_idx = 2
-    else:
-        active_idx = -1
-
-    last_label = "Đã hủy" if is_canceled else "Đã giao hàng thành công"
-
-    return render_template(
-        "customer/order_track.html",
-        order=order, active_idx=active_idx, last_label=last_label, status_str=s
-    )
 
 
 
