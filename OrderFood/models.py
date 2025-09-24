@@ -64,7 +64,10 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     password = db.Column(db.String(255), nullable=True)
     avatar = db.Column(db.String(255))  # lưu URL từ Cloudinary
-
+    created_date = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
 
     role = db.Column(SAEnum(Role, name="role_enum"), nullable=False, default=Role.CUSTOMER)
     address = db.Column(db.String(255))

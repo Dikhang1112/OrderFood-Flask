@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
-    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
+    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("admin@123"),
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "false").lower() == "true"
 
@@ -127,26 +127,28 @@ def create_app():
         if SEED_CLEAR:
             if not PRESERVE_TRANSACTIONS:
                 # Xoá theo thứ tự phụ thuộc để không vi phạm FK
+
                 try:
+                    # --- Bảng con / liên kết ---
+                    db.session.query(models.Notification).delete()
+                    db.session.query(models.OrderRating).delete()
+                    db.session.query(models.Refund).delete()
                     db.session.query(models.Payment).delete()
-                except Exception:
-                    pass
-                # Nếu có bảng OrderItem/OrderDetail thì xoá TRƯỚC Order
-                # try: db.session.query(models.OrderItem).delete()
-                # except Exception: pass
+                    db.session.query(models.Order).delete()
+                    db.session.query(models.CartItem).delete()
+                    db.session.query(models.Cart).delete()
+                    db.session.query(models.Dish).delete()
+                    db.session.query(models.Category).delete()
+                    db.session.query(models.Restaurant).delete()
+                    db.session.query(models.Customer).delete()
+                    db.session.query(models.RestaurantOwner).delete()
+                    db.session.query(models.Admin).delete()
+                    db.session.query(models.User).delete()
 
-                db.session.query(models.Order).delete()
-                db.session.query(models.CartItem).delete()
-                db.session.query(models.Cart).delete()
-
-                db.session.query(models.Dish).delete()
-                db.session.query(models.Category).delete()
-                db.session.query(models.Restaurant).delete()
-                db.session.query(models.RestaurantOwner).delete()
-                db.session.query(models.Admin).delete()
-                db.session.query(models.Customer).delete()
-                db.session.query(models.User).delete()
-                db.session.commit()
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    print("Error resetting database:", e)
             else:
                 # Giữ nguyên dữ liệu giao dịch & user/customer/restaurant để không mất lịch sử
                 pass

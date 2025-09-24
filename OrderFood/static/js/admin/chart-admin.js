@@ -1,48 +1,56 @@
-document.addEventListener("DOMContentLoaded", () => {
-    // Gọi API lấy dữ liệu user & owner
-//    fetch("/admin/api/stats/users_owners")
-//        .then(res => res.json())
-//        .then(data => {
-//            const ctx = document.getElementById("userOwnerChart").getContext("2d");
-//            new Chart(ctx, {
-//                type: "line",
-//                data: {
-//                    labels: data.labels, // ["Tháng 1", "Tháng 2", ...]
-//                    datasets: [
-//                        {
-//                            label: "User mới",
-//                            data: data.users,
-//                            borderColor: "#36A2EB",
-//                            fill: false,
-//                            tension: 0.3
-//                        },
-//                        {
-//                            label: "Owner mới",
-//                            data: data.owners,
-//                            borderColor: "#FF6384",
-//                            fill: false,
-//                            tension: 0.3
-//                        }
-//                    ]
-//                },
-//                options: {
-//                    responsive: true,
-//                    plugins: {
-//                        legend: { position: "top" }
-//                    }
-//                }
-//            });
-//        });
+let userOwnerChartInstance = null;
+let transactionChartInstance = null;
 
-    // Gọi API lấy dữ liệu giao dịch thành công
-    fetch("/admin/api/stats/transactions")
+// ========== User & Owner Chart ==========
+function loadUserOwnerChart() {
+    const period = document.getElementById("userOwnerPeriod").value;
+    const year = new Date().getFullYear(); // dùng năm hiện tại
+
+    fetch(`/admin/api/stats/users-owners?period=${period}&year=${year}`)
+        .then(res => res.json())
+        .then(data => {
+            const ctx = document.getElementById("userOwnerChart").getContext("2d");
+
+            // Destroy chart cũ nếu đã tồn tại
+            if (userOwnerChartInstance) {
+                userOwnerChartInstance.destroy();
+            }
+
+            userOwnerChartInstance = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { label: "User mới", data: data.users, borderColor: "#36A2EB", fill: false, tension: 0.3 },
+                        { label: "Owner mới", data: data.owners, borderColor: "#FF6384", fill: false, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: "top" } }
+                }
+            });
+        });
+}
+
+// ========== Transaction Chart ==========
+function loadTransactionChart() {
+    const period = document.getElementById("transactionPeriod").value;
+    const year = new Date().getFullYear(); // dùng năm hiện tại
+
+    fetch(`/admin/api/stats/transactions?period=${period}&year=${year}`)
         .then(res => res.json())
         .then(data => {
             const ctx = document.getElementById("transactionChart").getContext("2d");
-            new Chart(ctx, {
+
+            if (transactionChartInstance) {
+                transactionChartInstance.destroy();
+            }
+
+            transactionChartInstance = new Chart(ctx, {
                 type: "bar",
                 data: {
-                    labels: data.labels, // ["Tháng 1", "Tháng 2", ...]
+                    labels: data.labels,
                     datasets: [
                         {
                             label: "Giao dịch thành công",
@@ -59,4 +67,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
+}
+
+// ========== Event Listeners ==========
+document.addEventListener("DOMContentLoaded", () => {
+    // Load ban đầu
+    loadUserOwnerChart();
+    loadTransactionChart();
+
+    // User & Owner dropdown onchange
+    document.getElementById("userOwnerPeriod").addEventListener("change", loadUserOwnerChart);
+
+    // Transaction dropdown onchange
+    document.getElementById("transactionPeriod").addEventListener("change", loadTransactionChart);
 });

@@ -17,24 +17,22 @@ def revenue_summary(restaurant_id):
     month = today.month
     year = today.year
 
-    # Doanh thu ngày (tổng payment đã PAID)
-    day_total = db.session.query(func.coalesce(func.sum(Payment.amount), 0))\
-        .join(Order, Order.order_id == Payment.order_id)\
+    # Doanh thu ngày (tổng Order.total_price của đơn COMPLETED)
+    day_total = db.session.query(func.coalesce(func.sum(Order.total_price), 0))\
         .filter(Order.restaurant_id == restaurant_id,
                 func.date(Order.created_date) == today,
-                Payment.status == "PAID").scalar()
+                Order.status == "COMPLETED").scalar()
 
     # Doanh thu tháng
-    month_total = db.session.query(func.coalesce(func.sum(Payment.amount), 0))\
-        .join(Order, Order.order_id == Payment.order_id)\
+    month_total = db.session.query(func.coalesce(func.sum(Order.total_price), 0))\
         .filter(Order.restaurant_id == restaurant_id,
                 func.extract('month', Order.created_date) == month,
                 func.extract('year', Order.created_date) == year,
-                Payment.status == "PAID").scalar()
+                Order.status == "COMPLETED").scalar()
 
     return jsonify({
-        "today": int(day_total/100),   # Payment.amount đang *100 theo VNPay
-        "month": int(month_total/100)
+        "today": int(day_total),
+        "month": int(month_total)
     })
 
 
@@ -54,7 +52,7 @@ def dish_stats(restaurant_id):
     ).join(CartItem, CartItem.dish_id == Dish.dish_id) \
      .join(Order, Order.cart_id == CartItem.cart_id) \
      .filter(Order.restaurant_id == restaurant_id,
-             Order.status.in_(["PAID", "ACCEPTED", "COMPLETED"]))
+             Order.status == "COMPLETED")   # chỉ lấy đơn đã hoàn thành
 
     if mode == "day":
         query = query.filter(func.date(Order.created_date) == today)
@@ -74,6 +72,12 @@ def dish_stats(restaurant_id):
 
     return jsonify([{"dish": d[0], "quantity": int(d[1])} for d in data])
 
+
+
+    data = query.group_by(Dish.name).all()
+
+    return jsonify([{"dish": d[0], "quantity": int(d[1])} for d in data])
+
 # =============================
 # API line chart: doanh thu theo ngày/tháng
 # =============================
@@ -88,51 +92,47 @@ def revenue_line(restaurant_id):
         # ngày trong tháng hiện tại
         data = db.session.query(
             func.extract("day", Order.created_date).label("d"),
-            func.coalesce(func.sum(Payment.amount), 0)
-        ).join(Payment, Payment.order_id == Order.order_id) \
-         .filter(Order.restaurant_id == restaurant_id,
+            func.coalesce(func.sum(Order.total_price), 0)
+        ).filter(Order.restaurant_id == restaurant_id,
                  func.extract("month", Order.created_date) == month,
                  func.extract("year", Order.created_date) == year,
-                 Payment.status == "PAID") \
+                 Order.status == "COMPLETED") \
          .group_by("d").order_by("d").all()
-        return jsonify([{"label": int(d[0]), "revenue": int(d[1] / 100)} for d in data])
+        return jsonify([{"label": int(d[0]), "revenue": int(d[1])} for d in data])
 
     elif mode == "month":
         # tất cả tháng trong năm hiện tại
         data = db.session.query(
             func.extract("month", Order.created_date).label("m"),
-            func.coalesce(func.sum(Payment.amount), 0)
-        ).join(Payment, Payment.order_id == Order.order_id) \
-         .filter(Order.restaurant_id == restaurant_id,
+            func.coalesce(func.sum(Order.total_price), 0)
+        ).filter(Order.restaurant_id == restaurant_id,
                  func.extract("year", Order.created_date) == year,
-                 Payment.status == "PAID") \
+                 Order.status == "COMPLETED") \
          .group_by("m").order_by("m").all()
-        return jsonify([{"label": f"Tháng {int(d[0])}", "revenue": int(d[1] / 100)} for d in data])
+        return jsonify([{"label": f"Tháng {int(d[0])}", "revenue": int(d[1])} for d in data])
 
     elif mode == "custom_month":
         # ngày trong 1 tháng cụ thể
         selected_month = int(request.args.get("month", month))
         data = db.session.query(
             func.extract("day", Order.created_date).label("d"),
-            func.coalesce(func.sum(Payment.amount), 0)
-        ).join(Payment, Payment.order_id == Order.order_id) \
-         .filter(Order.restaurant_id == restaurant_id,
+            func.coalesce(func.sum(Order.total_price), 0)
+        ).filter(Order.restaurant_id == restaurant_id,
                  func.extract("month", Order.created_date) == selected_month,
                  func.extract("year", Order.created_date) == year,
-                 Payment.status == "PAID") \
+                 Order.status == "COMPLETED") \
          .group_by("d").order_by("d").all()
-        return jsonify([{"label": int(d[0]), "revenue": int(d[1] / 100)} for d in data])
+        return jsonify([{"label": int(d[0]), "revenue": int(d[1])} for d in data])
 
     elif mode == "quarter":
         # doanh thu theo tháng trong quý
         selected_quarter = int(request.args.get("quarter", (month - 1) // 3 + 1))
         data = db.session.query(
             func.extract("month", Order.created_date).label("m"),
-            func.coalesce(func.sum(Payment.amount), 0)
-        ).join(Payment, Payment.order_id == Order.order_id) \
-         .filter(Order.restaurant_id == restaurant_id,
+            func.coalesce(func.sum(Order.total_price), 0)
+        ).filter(Order.restaurant_id == restaurant_id,
                  func.extract("year", Order.created_date) == year,
                  func.extract("quarter", Order.created_date) == selected_quarter,
-                 Payment.status == "PAID") \
+                 Order.status == "COMPLETED") \
          .group_by("m").order_by("m").all()
-        return jsonify([{"label": f"Tháng {int(d[0])}", "revenue": int(d[1] / 100)} for d in data])
+        return jsonify([{"label": f"Tháng {int(d[0])}", "revenue": int(d[1])} for d in data])

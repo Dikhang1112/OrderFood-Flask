@@ -9,7 +9,7 @@
   --rs-accent: #22d3ee;
 
   /* ID | name | addr | status | rating | action */
-  --rs-cols: 60px 280px 280px 200px 240px 200px;
+--rs-cols: 60px 2fr 2fr 1.5fr 1fr 1fr; /* flex ratio */
 }
 
 /* Bảng */
@@ -17,6 +17,11 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed;
+}
+.rs-row-head, .rs-body .rs-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr); /* hoặc tỉ lệ linh hoạt */
 }
 
 /* Header */

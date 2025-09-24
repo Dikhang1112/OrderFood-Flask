@@ -7,9 +7,7 @@ from OrderFood.customer_service import PHONE_RE, get_user_by_phone
 from OrderFood.dao import *
 from OrderFood.dao_index import get_restaurants_by_name, get_restaurants_by_dishes_name, get_star_display, \
     get_user_by_email, create_user, get_active_cart, add_cart_item, count_cart_items
-from OrderFood.models import Restaurant, Customer, Cart, StatusCart
-
-
+from OrderFood.models import Restaurant, Customer, Cart, StatusCart, Role
 
 # --- Helpers ---
 ENUM_UPPERCASE = True
@@ -29,6 +27,10 @@ def is_owner(role: str) -> bool:
 # --- Routes ---
 @app.route("/")
 def index():
+    role = session.get("role")
+    if role and role.lower() == "admin":
+        flash("Admin không được truy cập trang này.", "warning")
+        return redirect(url_for("admin.admin_home"))
     keyword = (request.args.get("search") or "").strip()
     rating_filter = request.args.get("rating")
     location_filter = request.args.get("location")
@@ -148,7 +150,10 @@ def login():
 
         if is_owner(user.role):
             return redirect(url_for("owner.owner_home"))
-        return redirect(url_for("index"))
+        elif user.role == Role.ADMIN:
+            return redirect(url_for("admin.admin_home"))
+        else:
+            return redirect(url_for("index"))
 
     return render_template("auth.html")
 

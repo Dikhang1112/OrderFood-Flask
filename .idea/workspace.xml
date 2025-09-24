@@ -5,12 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7b4c69b2-120e-48e2-80ef-33c77f6d8e73" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/OrderFood/static/js/admin/manageUser.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/OrderFood/templates/admin/manage_user.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/notifications.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/admin_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/admin_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/chart_owner.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/chart_owner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/customer_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/customer_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/dao/user_dao.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/dao/user_dao.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/index.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/index.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/OrderFood/static/css/admin/listRestaurant.css" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/css/admin/listRestaurant.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/admin/manageRestaurant.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/admin/manageRestaurant.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/customer/noti.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/customer/noti.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/admin/restaurants.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/admin/restaurants.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/admin/chart-admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/admin/chart-admin.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/templates/admin/admin_home.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/admin/admin_home.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/templates/admin/sidebar.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/admin/sidebar.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/templates/auth.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/auth.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

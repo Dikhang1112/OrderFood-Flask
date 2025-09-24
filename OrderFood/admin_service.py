@@ -2,12 +2,15 @@ from flask import Blueprint, render_template, session, redirect, url_for, flash,
 from flask import current_app
 from datetime import datetime
 from sqlalchemy import func, extract
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from OrderFood import db
 from OrderFood.dao.restaurant_dao import get_all_restaurants, get_restaurant_by_id
+from OrderFood.dao.user_dao import get_all_user
 from OrderFood.email_service import send_restaurant_status_email
-from OrderFood.models import StatusRes, Order, StatusOrder, Customer, Role, Notification, Restaurant
+from OrderFood.models import StatusRes, Order, StatusOrder, Customer, Role, Notification, Restaurant, User, \
+    RestaurantOwner
 from sqlalchemy.orm import joinedload
 
 from OrderFood.notifications import push_customer_noti_on_completed
@@ -23,10 +26,11 @@ def is_admin(role) -> bool:
 
 @admin_bp.route("/")
 def admin_home():
+    current_year = datetime.now().year
     if not is_admin(session.get("role")):
         flash("Bạn không có quyền truy cập trang admin", "danger")
         return redirect(url_for("index"))
-    return render_template("admin/admin_home.html")
+    return render_template("admin/admin_home.html", current_year=current_year)
 
 
 @admin_bp.route("/logout")
@@ -216,29 +220,70 @@ def cancel_order(order_id: int):
     return redirect(url_for("admin.admin_delivery"))
 
 
-# @admin_bp.route("/api/stats/users-owners")
-# def stats_users_owners():
-#     if not is_admin(session.get("role")):
-#         return jsonify({"error": "forbidden"}), 403
-#
-#     now = datetime.now()
-#     labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
-#     users, owners = [], []
-#
-#     for m in range(1, now.month + 1):
-#         # đếm customer mới
-#         u_count = db.session.query(func.count(Customer.customer_id)) \
-#             .filter(extract("month", .created_date) == m,
-#                     extract("year", Customer.created_date) == now.year) \
-#             .scalar()
-#         # đếm owner mới (từ bảng Restaurant)
-#         o_count = db.session.query(func.count(Restaurant.res_owner_id.distinct())) \
-#             .filter(extract("month", Restaurant.created_date) == m,
-#                     extract("year", Restaurant.created_date) == now.year) \
-#             .scalar()
-#
-#         users.append(u_count or 0)
-#         owners.append(o_count or 0)
+from flask import request
+
+@admin_bp.route("/api/stats/users-owners")
+def stats_users_owners():
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    # Lấy tham số query
+    period = request.args.get("period", "month")  # month / quarter / year
+    year = int(request.args.get("year", datetime.now().year))
+
+    labels, users, owners = [], [], []
+
+    if period == "month":
+        labels = [f"Tháng {i}" for i in range(1, 13)]
+        months = range(1, 13)
+        for m in months:
+            u_count = db.session.query(func.count(Customer.user_id)) \
+                .join(User, Customer.user_id == User.user_id) \
+                .filter(extract("month", User.created_date) == m,
+                        extract("year", User.created_date) == year) \
+                .scalar() or 0
+
+            o_count = db.session.query(func.count(RestaurantOwner.user_id)) \
+                .join(User, RestaurantOwner.user_id == User.user_id) \
+                .filter(extract("month", User.created_date) == m,
+                        extract("year", User.created_date) == year) \
+                .scalar() or 0
+
+            users.append(u_count)
+            owners.append(o_count)
+
+    elif period == "quarter":
+        labels = [f"Quý {i}" for i in range(1, 5)]
+        quarters = [(1,3),(4,6),(7,9),(10,12)]
+        for start, end in quarters:
+            u_count = db.session.query(func.count(Customer.user_id)) \
+                .join(User, Customer.user_id == User.user_id) \
+                .filter(extract("month", User.created_date).between(start, end),
+                        extract("year", User.created_date) == year) \
+                .scalar() or 0
+
+            o_count = db.session.query(func.count(RestaurantOwner.user_id)) \
+                .join(User, RestaurantOwner.user_id == User.user_id) \
+                .filter(extract("month", User.created_date).between(start, end),
+                        extract("year", User.created_date) == year) \
+                .scalar() or 0
+
+            users.append(u_count)
+            owners.append(o_count)
+
+    elif period == "year":
+        # Chỉ có 1 cột cho cả năm
+        labels = [str(year)]
+        u_count = db.session.query(func.count(Customer.user_id)) \
+            .join(User, Customer.user_id == User.user_id) \
+            .filter(extract("year", User.created_date) == year) \
+            .scalar() or 0
+        o_count = db.session.query(func.count(RestaurantOwner.user_id)) \
+            .join(User, RestaurantOwner.user_id == User.user_id) \
+            .filter(extract("year", User.created_date) == year) \
+            .scalar() or 0
+        users.append(u_count)
+        owners.append(o_count)
 
     return jsonify({
         "labels": labels,
@@ -252,19 +297,122 @@ def stats_transactions():
     if not is_admin(session.get("role")):
         return jsonify({"error": "forbidden"}), 403
 
-    now = datetime.now()
-    labels = [f"Tháng {i}" for i in range(1, now.month + 1)]
-    transactions = []
+    period = request.args.get("period", "month")  # month / quarter / year
+    year = int(request.args.get("year", datetime.now().year))
 
-    for m in range(1, now.month + 1):
+    labels, transactions = [], []
+
+    if period == "month":
+        labels = [f"Tháng {i}" for i in range(1, 13)]
+        months = range(1, 13)
+        for m in months:
+            t_count = db.session.query(func.count(Order.order_id)) \
+                .filter(extract("month", Order.created_date) == m,
+                        extract("year", Order.created_date) == year,
+                        Order.status == StatusOrder.COMPLETED) \
+                .scalar() or 0
+            transactions.append(t_count)
+
+    elif period == "quarter":
+        labels = [f"Quý {i}" for i in range(1,5)]
+        quarters = [(1,3),(4,6),(7,9),(10,12)]
+        for start,end in quarters:
+            t_count = db.session.query(func.count(Order.order_id)) \
+                .filter(extract("month", Order.created_date).between(start, end),
+                        extract("year", Order.created_date) == year,
+                        Order.status == StatusOrder.COMPLETED) \
+                .scalar() or 0
+            transactions.append(t_count)
+
+    elif period == "year":
+        labels = [str(year)]
         t_count = db.session.query(func.count(Order.order_id)) \
-            .filter(extract("month", Order.created_date) == m,
-                    extract("year", Order.created_date) == now.year,
+            .filter(extract("year", Order.created_date) == year,
                     Order.status == StatusOrder.COMPLETED) \
-            .scalar()
-        transactions.append(t_count or 0)
+            .scalar() or 0
+        transactions.append(t_count)
 
     return jsonify({
         "labels": labels,
         "transactions": transactions
     })
+
+
+@admin_bp.route("/manage_user")
+def manage_user():
+    users = get_all_user()  # trả về tất cả user (trừ admin)
+
+    customers = [u for u in users if u.role == Role.CUSTOMER]
+    owners = [u for u in users if u.role == Role.RESTAURANT_OWNER]
+
+    return render_template(
+        "admin/manage_user.html",
+        customers=customers,
+        owners=owners
+    )
+
+
+@admin_bp.route("/<int:user_id>/delete_customer", methods=["DELETE"])
+def delete_customer(user_id: int):
+    try:
+        # Lấy customer
+        customer = Customer.query.get(user_id)
+        if not customer:
+            return jsonify({"error": "not_found"}), 404
+
+        # 1. Xóa các Payment liên quan đến Order
+        for order in customer.orders:
+            if order.payment:
+                db.session.delete(order.payment)
+
+        # 2. Xóa OrderRating
+        for rating in customer.ratings:
+            db.session.delete(rating)
+
+        # 3. Xóa Notification
+        notifications = Notification.query.filter_by(customer_id=user_id).all()
+        for noti in notifications:
+            db.session.delete(noti)
+
+        # 4. Xóa Order
+        for order in customer.orders:
+            db.session.delete(order)
+
+        # 5. Xóa CartItem + Cart
+        for cart in customer.carts:
+            for item in cart.items:
+                db.session.delete(item)
+            db.session.delete(cart)
+
+        # 6. Xóa Customer và User
+        db.session.delete(customer)
+        db.session.delete(customer.user)
+
+        db.session.commit()
+        return jsonify({"message": "deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@admin_bp.route("/<int:user_id>/delete_owner", methods=["DELETE"])
+def delete_owner(user_id: int):
+    if not is_admin(session.get("role")):
+        return jsonify({"error": "forbidden"}), 403
+
+    user = User.query.get(user_id)
+    if not user or user.role.name != "RESTAURANT_OWNER":
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        # Xóa restaurant trước, cascade sẽ xóa restaurant_owner và user
+        if user.restaurant_owner:
+            if user.restaurant_owner.restaurant:
+                db.session.delete(user.restaurant_owner.restaurant)
+            db.session.delete(user.restaurant_owner)
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"ok": True, "id": user_id})
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

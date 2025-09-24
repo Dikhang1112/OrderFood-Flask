@@ -40,7 +40,14 @@ def is_restaurant_open(restaurant):
         open_time = datetime.strptime(restaurant.open_hour, "%H:%M").time()
         close_time = datetime.strptime(restaurant.close_hour, "%H:%M").time()
         now = datetime.now().time()
-        return open_time <= now <= close_time
+
+        if open_time <= close_time:
+            # Giờ mở và đóng cùng ngày
+            return open_time <= now <= close_time
+        else:
+            # Giờ đóng thuộc ngày hôm sau (qua nửa đêm)
+            return now >= open_time or now <= close_time
+
     except Exception as e:
         # Trường hợp open_hour/close_hour không hợp lệ
         return False
@@ -51,8 +58,8 @@ def is_restaurant_open(restaurant):
 @customer_bp.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
     res = dao_cus.get_restaurant_by_id(restaurant_id)
-    if not res:
-        abort(404)
+    # if not res:
+    #     abort(404)
 
     dishes, categories = dao_cus.get_restaurant_menu_and_categories(restaurant_id)
     stars = dao_cus.get_star_display(res.rating_point or 0)

@@ -132,14 +132,16 @@
     {% endif %}
 </div>
 
-<a href="/cart/{{ res.restaurant_id }}" id="mini_cart"
-   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow  {% if cart_items_count <= 0 %}d-none{% endif %}"
-   style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;">
+<a href="{% if is_open %}/cart/{{ res.restaurant_id }}{% else %}#{% endif %}"
+   id="mini_cart"
+   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow {% if cart_items_count <= 0 or not is_open %}disabled{% endif %}"
+   style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;"
+   {% if not is_open %}onclick="return false;" {% endif %}>
     <i class="fas fa-shopping-cart fa-lg text-white"></i>
-    <!-- Badge số lượng -->
     <span id="cart-count"
           class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger  {% if cart_items_count <= 0 %}d-none{% endif %}">
-            {{cart_items_count}}        </span>
+            {{cart_items_count}}
+    </span>
 </a>
 
 <!-- === Popup form chi tiết món ăn === -->
@@ -168,7 +170,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-success" id="dishModalAddBtn">Thêm vào giỏ</button>
+                <button type="button" class="btn btn-success" id="dishModalAddBtn"
+                        {% if not is_open %}disabled{% endif %}>
+                    Thêm vào giỏ
+                </button>
             </div>
         </div>
     </div>
