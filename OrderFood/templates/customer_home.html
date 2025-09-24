@@ -2,40 +2,53 @@
 {% block title %}Khu Khách Hàng{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/customer_home.css') }}"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client/customer_home.css') }}"/>
+<script src="{{ url_for('static', filename='js/customer/banner.js') }}"></script>
 
-<!-- Hero -->
-<div class="hero-welcome fade-in-up mt-4 p-5 border rounded">
-    <h2 class="mb-2">
-        Xin chào,
-        {{ session.get('user_name')
-        or (session.get('user_email') and session.get('user_email').split('@')[0])
-        or 'bạn' }}
-        <span class="wave">👋</span>
-    </h2>
-    <p class="mb-1">Bạn đang đăng nhập với vai trò <strong>Customer</strong>.</p>
-    <p class="text-muted mb-0">Tại đây bạn có thể xem món ăn, đặt hàng, theo dõi đơn hàng của mình.</p>
+<!-- Banner Carousel -->
+<div class="container mt-4">
+    <div id="bannerCarousel"
+         class="carousel slide ch-banner-carousel shadow-sm rounded-4 overflow-hidden"
+         data-bs-ride="carousel"
+         data-files='["banner1.jpg","banner2.jpg","banner3.jpg","banner4.jpg","banner5.jpg"]'
+         data-static="{{ url_for('static', filename='img') }}/">
+        <div class="carousel-indicators" id="bannerIndicators"></div>
+        <div class="carousel-inner" id="bannerInner" role="listbox"></div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev"
+                aria-label="Previous">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next"
+                aria-label="Next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+    </div>
 </div>
 
 <div class="container mt-4">
-    <div class="title-row d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
-        <h3 class="m-0">Danh sách 50 nhà hàng</h3>
-        <div class="title-underline"></div>
+    <div class="ch-title-row d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
+        <h3 class="m-0">Danh sách các nhà hàng tiêu biểu</h3>
+        <div class="ch-title-underline"></div>
     </div>
 
-    {# Bộ lọc (tùy chọn). Hiển thị nếu controller có truyền locations/per_page/... #}
+    <!-- Bộ lọc -->
     <form method="get" action="" class="row mb-3 g-2 align-items-center" style="font-size: 1rem;">
         <div class="col-auto">
             <input type="text" name="search" value="{{ request.args.get('search','') }}"
-                   class="form-control" placeholder="Tìm theo tên hoặc địa chỉ..." style="width: 240px; font-size: 1rem;">
+                   class="form-control" placeholder="Tìm theo tên hoặc địa chỉ..."
+                   style="width: 240px; font-size: 1rem;">
         </div>
 
         <div class="col-auto">
             <select name="rating" class="form-select" style="width: 150px; font-size: 1rem;">
                 <option value="">Đánh giá</option>
-                <option value="4" {% if request.args.get('rating') == '4' %}selected{% endif %}>Từ 4 sao</option>
-                <option value="3" {% if request.args.get('rating') == '3' %}selected{% endif %}>Từ 3 sao</option>
-                <option value="2" {% if request.args.get('rating') == '2' %}selected{% endif %}>Từ 2 sao</option>
+                <option value="4" {% if request.args.get(
+                'rating') == '4' %}selected{% endif %}>Từ 4 sao</option>
+                <option value="3" {% if request.args.get(
+                'rating') == '3' %}selected{% endif %}>Từ 3 sao</option>
+                <option value="2" {% if request.args.get(
+                'rating') == '2' %}selected{% endif %}>Từ 2 sao</option>
             </select>
         </div>
 
@@ -44,51 +57,73 @@
                 <option value="">Địa điểm</option>
                 {% if locations %}
                 {% for loc in locations %}
-                <option value="{{ loc }}" {% if request.args.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+                <option value="{{ loc }}" {% if request.args.get(
+                'location') == loc %}selected{% endif %}>{{ loc }}</option>
                 {% endfor %}
                 {% endif %}
             </select>
         </div>
 
         <div class="col-auto">
-            <button type="submit" class="btn btn-primary" style="font-size: 1rem;">Lọc</button>
+            <button type="submit" class="btn ch-btn-primary">Lọc</button>
         </div>
     </form>
 
     {% if restaurants and restaurants|length > 0 %}
     <div class="row g-3">
         {% for item in restaurants %}
-        {# Tương thích 2 kiểu dữ liệu: item = Restaurant | {restaurant, stars} #}
         {% set r = item.restaurant if item is mapping and item.restaurant is defined else item %}
         {% set s = item.stars if item is mapping and item.stars is defined else None %}
 
         <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <a href="/restaurant/{{ r.restaurant_id }}" class="text-decoration-none text-dark">
-                <div class="card restaurant-card h-100 shadow-sm hover-lift border-0 transition-card rounded-3">
-                    <div class="img-wrap">
+                <div class="card ch-restaurant-card h-100 shadow-sm hover-lift border-0 transition-card rounded-3">
+                    <div class="ch-img-wrap">
                         <img src="{{ r.image or 'https://via.placeholder.com/800x400?text=No+Image' }}"
-                             class="card-img-top rounded-top-3" alt="{{ r.name }}"
-                             style="height: 150px; object-fit: cover;">
+                             class="card-img-top rounded-top-3 ch-img" alt="{{ r.name }}">
                     </div>
 
                     <div class="card-body d-flex flex-column p-2" style="font-size: 1rem;">
-                        <h6 class="card-title text-truncate mb-1" style="font-weight: 600;" title="{{ r.name }}">{{ r.name }}</h6>
-                        <p class="card-text text-muted mb-2 text-truncate" style="font-size: 0.95rem;" title="{{ r.address }}">
-                            {{ r.address }}
-                        </p>
 
-                        {# Hiển thị sao nếu có s (restaurants_with_stars) #}
+                        <!-- Row 1: Tên nhà hàng + Yêu thích -->
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="card-title mb-0 text-truncate" style="font-weight:600;" title="{{ r.name }}">
+                                {{ r.name }}
+                            </h6>
+                            <span class="text-danger small fw-bold">
+      <i class="fa-solid fa-heart me-1"></i> Bán chạy
+    </span>
+                        </div>
+
+                        <!-- Row 2: Địa chỉ + khoảng cách -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <p class="ch-card-text text-muted mb-0 text-truncate" style="font-size:0.95rem;"
+                               title="{{ r.address }}">
+                                {{ r.address }}
+                            </p>
+                            <span class="text-muted small">
+      <i class="fa-solid fa-location-dot me-1"></i> 1.2 km
+    </span>
+                        </div>
+
+                        <!-- Row 3: Giờ mở cửa + Discount -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <p class="ch-card-text mb-0">
+                                <i class="fa-regular fa-clock text-danger me-1"></i>
+                                {{ r.open_hour or '08:00' }} - {{ r.close_hour or '22:00' }}
+                            </p>
+                            <span class="text-success small fw-bold">
+    <i class="fa-solid fa-ticket me-1"></i> -20%
+  </span>
+                        </div>
+
                         {% if s %}
-                        <div class="rating mb-1" style="font-size: 1rem;">
+                        <div class="ch-rating mb-2" style="font-size: 1rem;">
                             {% for _ in range(s.full) %}<i class="fas fa-star text-warning"></i>{% endfor %}
                             {% if s.half %}<i class="fas fa-star-half-alt text-warning"></i>{% endif %}
                             {% for _ in range(s.empty) %}<i class="far fa-star text-secondary"></i>{% endfor %}
                         </div>
                         {% endif %}
-
-                        <div class="mt-2 d-flex justify-content-center">
-                            <span class="btn btn-primary btn-detail pulse-on-hover">Xem chi tiết</span>
-                        </div>
                     </div>
                 </div>
             </a>
@@ -133,9 +168,5 @@
     <p class="text-muted">Chưa có nhà hàng nào trong hệ thống.</p>
     {% endif %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<!-- Font Awesome (icon sao) -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 {% endblock %}

@@ -1,17 +1,16 @@
 import os
 from urllib.parse import quote
 
+import cloudinary
+from apscheduler.schedulers.background import BackgroundScheduler
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
-from authlib.integrations.flask_client import OAuth
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
-import cloudinary
 
 from OrderFood.helper.NotiHelper import init_app as init_noti
-from apscheduler.schedulers.background import BackgroundScheduler
-
 
 # ================== Load .env ==================
 load_dotenv()
@@ -24,7 +23,7 @@ scheduler = BackgroundScheduler(timezone="Asia/Ho_Chi_Minh", daemon=True)
 _SCHEDULER_STARTED = False  # chống start 2 lần
 
 # ================== ENV & defaults ==================
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
@@ -52,6 +51,7 @@ SEED_DB = os.getenv("SEED_DB", "false").lower() == "true"
 SEED_CLEAR = os.getenv("SEED_CLEAR", "false").lower() == "true"
 PRESERVE_TRANSACTIONS = os.getenv("PRESERVE_TRANSACTIONS", "true").lower() == "true"  # giữ Order/Payment/Cart
 
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-please-change-me")
@@ -63,12 +63,14 @@ def create_app():
     from OrderFood.customer_service import customer_bp
     from OrderFood.notifications import noti_bp
     from OrderFood.chart_owner import bp_stats
+    from OrderFood.owner import owner_bp
 
     app.register_blueprint(noti_bp)
     app.register_blueprint(vnpay_bp)
     app.register_blueprint(google_auth_bp)
     app.register_blueprint(admin_service.admin_bp)
     app.register_blueprint(customer_bp)
+    app.register_blueprint(owner_bp)
 
     app.register_blueprint(bp_stats)
 
@@ -79,12 +81,21 @@ def create_app():
         api_secret=CLOUDINARY_API_SECRET,
     )
 
+    app.config.update(
+        MAIL_SERVER=MAIL_SERVER,
+        MAIL_PORT=MAIL_PORT,
+        MAIL_USE_TLS=MAIL_USE_TLS,
+        MAIL_USE_SSL=MAIL_USE_SSL,
+        MAIL_USERNAME=MAIL_USERNAME,
+        MAIL_PASSWORD=MAIL_PASSWORD,
+        # Gợi ý: để sender trùng tài khoản gửi cho khỏi bị chặn
+        MAIL_DEFAULT_SENDER=os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME,
+    )
     # Init extensions
     db.init_app(app)
     mail.init_app(app)
 
     # Admin blueprint + notifications
-
 
     init_noti(app)
 
@@ -212,6 +223,7 @@ def create_app():
                         by_admin_id=a1.user_id,
                         address=random.choice(["Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Da Lat", "Vinh Long"]),
                         rating_point=round(random.uniform(1.0, 5.0), 1),
+
                     )
                     restaurants_to_add.append(res)
 
@@ -354,5 +366,6 @@ def create_app():
         # ---- END SCHEDULER ----
 
     return app
+
 
 app = create_app()

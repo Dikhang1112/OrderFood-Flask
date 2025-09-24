@@ -7,7 +7,7 @@
 
     {% if restaurant is none %}
     <p>Bạn chưa đăng ký mở nhà hàng, hãy đăng ký tại đây</p>
-    <a class="btn btn-primary" href="{{ url_for('res_register') }}">Đăng ký nhà hàng</a>
+    <a class="btn btn-primary" href="{{ url_for('owner.res_register') }}">Đăng ký nhà hàng</a>
     {% elif restaurant.status.name == "PENDING" %}
     <p>Đơn đăng ký nhà hàng của bạn đang được duyệt</p>
     {% elif restaurant.status.name == "APPROVED" %}

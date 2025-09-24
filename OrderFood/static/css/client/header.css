@@ -1,0 +1,171 @@
+/* === OrderFood Header — ShopeeFood-ish theme ===
+   Works with Bootstrap 5 "navbar navbar-expand-sm navbar-dark bg-dark"
+   File: static/css/client/header.css
+*/
+
+/* Palette */
+:root {
+  --brand-700: #e85d52;   /* bright red */
+  --brand-600: #ff5533;   /* red-orange */
+  --brand-500: #ff6a3d;   /* warm orange */
+  --brand-100: #ffe6df;   /* tint */
+  --text-on-dark: #ffffff;
+  --muted-on-dark: rgba(255,255,255,.75);
+  --divider-on-dark: rgba(255,255,255,.15);
+}
+
+/* Sticky, glossy navbar */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  --bs-navbar-padding-y: .6rem;
+  box-shadow: 0 6px 18px rgba(255, 61, 46, .16);
+  backdrop-filter: saturate(160%) blur(6px);
+}
+
+/* Override bg-dark to brand gradient */
+.navbar.bg-dark {
+  background: linear-gradient(90deg, var(--brand-700), var(--brand-500)) !important;
+}
+
+/* Brand */
+.navbar .navbar-brand {
+  color: var(--text-on-dark) !important;
+  font-weight: 800;
+  letter-spacing: .3px;
+  text-transform: none;
+}
+.navbar .navbar-brand:hover {
+  opacity: .95;
+  transform: translateY(-.5px);
+}
+
+/* Nav links */
+.navbar .nav-link {
+  color: var(--muted-on-dark) !important;
+  font-weight: 600;
+  position: relative;
+  padding-inline: .75rem;
+  transition: color .15s ease, opacity .15s ease;
+}
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+  color: var(--text-on-dark) !important;
+}
+
+/* Active/hover underline pill */
+.navbar .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: .35rem;
+  height: 3px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background .15s ease, transform .15s ease;
+  transform: scaleX(0);
+  transform-origin: center;
+}
+.navbar .nav-link:hover::after,
+.navbar .nav-link:focus::after,
+.navbar .nav-item .nav-link.active::after {
+  background: var(--text-on-dark);
+  transform: scaleX(1);
+}
+
+/* Buttons (e.g., Đăng nhập, dropdown trigger) */
+.navbar .btn-outline-light {
+  --btn-border: rgba(255,255,255,.6);
+  color: var(--text-on-dark);
+  border-color: var(--btn-border);
+  font-weight: 700;
+  padding: .45rem .9rem;
+  border-width: 2px;
+}
+.navbar .btn-outline-light:hover,
+.navbar .btn-outline-light:focus {
+  color: var(--brand-700);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 6px 14px rgba(255,255,255,.15);
+}
+
+/* Toggler (mobile) */
+.navbar .navbar-toggler {
+  border: 0;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.navbar .navbar-toggler:focus {
+  outline: none;
+}
+
+/* Collapse spacing on mobile */
+@media (max-width: 576px) {
+  #mynavbar .navbar-nav .nav-link {
+    padding-block: .6rem;
+  }
+  .navbar .dropdown {
+    width: 100%;
+  }
+  .navbar .dropdown-toggle {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  border: 0;
+  padding: .5rem;
+  border-radius: 14px;
+  box-shadow: 0 18px 32px rgba(0,0,0,.18);
+  min-width: 220px;
+}
+.dropdown-menu .dropdown-item,
+.dropdown-menu .dropdown-item-text {
+  border-radius: 10px;
+  padding: .5rem .75rem;
+  font-weight: 600;
+}
+.dropdown-menu .dropdown-item-text small {
+  color: #6c757d;
+  font-weight: 500;
+}
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus {
+  background: var(--brand-100);
+  color: #b02a22;
+}
+
+/* Divider inside dropdown */
+.dropdown-menu .dropdown-divider {
+  border-top: 1px solid #eee;
+  margin: .4rem .25rem;
+}
+
+/* Right-aligned dropdown with extra spacing */
+.dropdown-menu-end {
+  margin-top: .4rem;
+}
+
+/* Utilities for email pill (optional if you style session email text) */
+.navbar .dropdown-toggle {
+  border-width: 2px;
+}
+
+/* Smooth transitions */
+.navbar, .navbar * {
+  transition: background-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+/* Optional: subtle top border glow for depth */
+.navbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%);
+}
