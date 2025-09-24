@@ -64,13 +64,22 @@ function updateCartCount(count) {
 
     if (badge) {
         badge.textContent = count;
-        badge.classList.remove("d-none"); // đảm bảo badge luôn hiển thị
+        if (count <= 0) {
+            badge.classList.add("d-none");
+        } else {
+            badge.classList.remove("d-none");
+        }
     }
 
     if (mini_cart) {
-        mini_cart.classList.remove("d-none"); // đảm bảo mini-cart luôn hiển thị
+        if (count <= 0) {
+            mini_cart.classList.add("disabled");
+        } else {
+            mini_cart.classList.remove("disabled");
+        }
     }
 }
+
 
 // Gắn sự kiện cho các nút "+" trên danh sách món
 document.querySelectorAll('.add-dish-btn').forEach(btn => {
@@ -91,3 +100,72 @@ document.querySelectorAll('.add-dish-btn').forEach(btn => {
 window.addToCart = addToCart;
 window.openDishModal = openDishModal;
 window.updateCartCount = updateCartCount;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.querySelector('.ct-table');
+    if (!table) return;
+
+    // Inline edit quantity / note
+    table.addEventListener('blur', (e) => {
+        if (e.target.classList.contains('cart-qty-input') || e.target.classList.contains('cart-note-input')) {
+            const row = e.target.closest('tr');
+            const itemId = e.target.dataset.id;
+            const quantity = parseInt(row.querySelector('.cart-qty-input').value) || 1;
+            const note = row.querySelector('.cart-note-input').value || '';
+            updateCartItem(itemId, quantity, note, row);
+        }
+    }, true);
+
+    // Click xóa
+    table.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-cart-item')) {
+            const row = e.target.closest('tr');
+            deleteCartItem(e.target.dataset.id, row);
+        }
+    });
+});
+
+function updateCartItem(itemId, quantity, note, row) {
+    fetch(`/api/cart/${itemId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity, note })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            row.querySelector('.cart-subtotal').textContent = data.subtotal.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('cart-total').textContent = data.total.toLocaleString('vi-VN') + ' đ';
+        } else alert(data.error || "Có lỗi khi cập nhật sản phẩm");
+    }).catch(err => console.error(err));
+}
+
+function deleteCartItem(itemId, row) {
+    if (!confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) return;
+
+    fetch(`/api/cart/${itemId}`, { method: "DELETE" })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            row.remove();
+            updateCartCount(data.total_items);
+
+            // Update tổng giá
+            let total = 0;
+            document.querySelectorAll('.cart-subtotal').forEach(cell => {
+                total += parseFloat(cell.textContent.replace(/[^0-9.-]+/g,""));
+            });
+            document.getElementById('cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+            console.log(data.redirect_url);
+
+            // Redirect nếu giỏ hàng trống
+            if (data.redirect_url) {
+            console.log("ss");
+                window.location.href = data.redirect_url;
+            }
+        } else {
+            alert(data.error || "Có lỗi khi xóa sản phẩm");
+        }
+    })
+    .catch(err => console.error(err));
+}

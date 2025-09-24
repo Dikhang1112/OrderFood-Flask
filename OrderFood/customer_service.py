@@ -55,6 +55,9 @@ def is_restaurant_open(restaurant):
 
 # ============== routes render customer/*.html ==============
 
+from flask import session
+from sqlalchemy import func
+
 @customer_bp.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
     res = dao_cus.get_restaurant_by_id(restaurant_id)
@@ -90,6 +93,8 @@ def restaurant_detail(restaurant_id):
     )
 
 
+
+
 @customer_bp.route("/cart/<int:restaurant_id>")
 def cart(restaurant_id):
     user_id = session.get("user_id")
@@ -107,6 +112,68 @@ def cart(restaurant_id):
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price
                            , is_open=is_open)
 
+# ========== CẬP NHẬT ITEM ==========
+@customer_bp.route("/api/cart/<int:item_id>", methods=["PUT"])
+def update_cart_item(item_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    data = request.json
+    quantity = data.get("quantity", 1)
+    note = data.get("note", "")
+
+    item = CartItem.query.get(item_id)
+    if not item or item.cart.customer.user_id != user_id:
+        return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
+
+    item.quantity = quantity
+    item.note = note
+    db.session.commit()
+
+    subtotal = item.quantity * item.dish.price
+    total = sum(i.quantity * i.dish.price for i in item.cart.items)
+    total_items = sum(i.quantity for i in item.cart.items)
+
+    return jsonify({"success": True, "subtotal": subtotal, "total": total, "total_items": total_items})
+
+# Xóa
+@customer_bp.route("/api/cart/<int:item_id>", methods=["DELETE"])
+def delete_cart_item(item_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    # Lấy item
+    item = CartItem.query.get(item_id)
+    if not item or not item.cart or not item.cart.customer or item.cart.customer.user_id != user_id:
+        return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
+
+    # Lấy restaurant_id trước khi xóa
+    restaurant_id = item.cart.restaurant.restaurant_id if item.cart.restaurant else None
+
+    # Xóa item
+    db.session.delete(item)
+    db.session.commit()
+
+    # Count các CartItem còn lại của user trong restaurant này
+    remaining_items = CartItem.query.join(Cart).filter(
+        Cart.cus_id == user_id,
+        Cart.res_id == restaurant_id,
+        Cart.status == StatusCart.ACTIVE or Cart.status == StatusCart.SAVED
+    ).count()
+    print("remaining_items:", remaining_items)
+    print("restaurant_id:", restaurant_id)
+
+    response = {"success": True, "total_items": remaining_items}
+
+    # Nếu giỏ hàng trống -> trả redirect_url
+    if remaining_items == 0 and restaurant_id:
+        response["redirect_url"] = url_for(
+            "customer.restaurant_detail", restaurant_id=restaurant_id
+        )
+
+    return jsonify(response)
 
 @customer_bp.route("/orders")
 def my_orders():

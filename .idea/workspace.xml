@@ -5,23 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7b4c69b2-120e-48e2-80ef-33c77f6d8e73" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/OrderFood/static/js/admin/manageUser.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/OrderFood/templates/admin/manage_user.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/admin_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/admin_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/chart_owner.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/chart_owner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/OrderFood/customer_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/customer_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/dao/user_dao.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/dao/user_dao.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/index.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/index.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/static/css/admin/listRestaurant.css" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/css/admin/listRestaurant.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/admin/chart-admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/admin/chart-admin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/admin/admin_home.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/admin/admin_home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/admin/sidebar.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/admin/sidebar.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/auth.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/auth.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/customer/cart.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/customer/cart.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OrderFood/templates/customer/cart.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/customer/cart.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -54,7 +41,8 @@
     "Python.index.executor": "Run",
     "Python.owner.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "develop",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "QLKH",
     "last_opened_file_path": "C:/Users/DUNG/Desktop"
   }
 }]]></component>
@@ -90,7 +78,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
+        <option value="bundled-python-sdk-7e47963ff851-f0eec537fc84-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.23892.515" />
       </set>
     </attachedChunks>
   </component>
