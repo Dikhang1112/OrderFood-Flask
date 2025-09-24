@@ -1,12 +1,15 @@
 # OrderFood/customer.py
+import re
 
 from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for, flash
+from werkzeug.security import check_password_hash, generate_password_hash
 
+from OrderFood import db
 from OrderFood.dao import customer_dao as dao_cus
 from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
-    Order, StatusOrder, StatusCart, Notification, OrderRating
+    Order, StatusOrder, StatusCart, Notification, OrderRating, User
 )
 
 customer_bp = Blueprint("customer", __name__)
@@ -21,8 +24,14 @@ def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
 
+def is_customer_or_owner(role):
+    return (role or "").lower() in ("customer", "restaurant_owner")
+def get_user_by_phone(phone: str):
+    return User.query.filter_by(phone=phone).first()
+
 
 from datetime import datetime
+
 
 def is_restaurant_open(restaurant):
     if not restaurant.is_open:
@@ -91,6 +100,7 @@ def cart(restaurant_id):
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price
                            , is_open=is_open)
 
+
 @customer_bp.route("/orders")
 def my_orders():
     uid = session.get("user_id")
@@ -113,11 +123,6 @@ def my_orders():
     )
 
 
-
-
-
-
-
 @customer_bp.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
@@ -129,6 +134,7 @@ def customer_home():
         for r in restaurants
     ]
     return render_template("customer_home.html", restaurants=restaurants_with_stars)
+
 
 @customer_bp.route("/notifications/json")
 def notifications_json():
@@ -149,6 +155,7 @@ def notifications_json():
 
     return jsonify({"items": [to_dict(n) for n in items], "unread_count": unread}), 200
 
+
 @customer_bp.route("/notifications/open/<int:noti_id>")
 def notifications_open(noti_id):
     uid = session.get("user_id")
@@ -158,6 +165,7 @@ def notifications_open(noti_id):
     order_id = dao_cus.open_notification(noti_id, uid)
     return redirect(url_for("customer.order_track", order_id=order_id))
 
+
 @customer_bp.route("/notifications/mark-all-read", methods=["POST"])
 def notifications_mark_all_read():
     uid = session.get("user_id")
@@ -166,6 +174,7 @@ def notifications_mark_all_read():
 
     dao_cus.mark_all_notifications_read(uid)
     return jsonify({"ok": True})
+
 
 @customer_bp.route("/order/<int:order_id>/rate", methods=["POST"])
 def order_rate(order_id):
@@ -190,6 +199,7 @@ def order_rate(order_id):
     dao_cus.update_restaurant_rating(order.restaurant_id)
     flash("Cảm ơn bạn đã đánh giá!", "success")
     return redirect(url_for("customer.order_track", order_id=order_id))
+
 
 @customer_bp.route("/order/<int:order_id>/track")
 def order_track(order_id):
@@ -218,3 +228,80 @@ def order_track(order_id):
     )
 
 
+@customer_bp.route("/profile", methods=["GET"])
+def profile_page():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    return render_template("customer/profile.html", user=user, role=role)
+
+
+# === Cập nhật tên / địa chỉ ===
+PHONE_RE = re.compile(r'^0\d{9}$')
+@customer_bp.route("/profile", methods=["POST"])
+def profile_update():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    name    = (request.form.get("name") or "").strip()
+    address = (request.form.get("address") or "").strip()
+    phone   = (request.form.get("phone") or "").strip()
+
+    if not name:
+        flash("Tên không được để trống.", "danger")
+        return redirect(url_for("customer.profile"))
+
+    if phone and not PHONE_RE.match(phone):
+        flash("Số điện thoại không hợp lệ. Yêu cầu 10 số và bắt đầu bằng 0.", "warning")
+        return redirect(url_for("customer.profile"))
+
+    if phone:
+        exists = User.query.filter(User.phone == phone, User.user_id != uid).first()
+        if exists:
+            flash("Số điện thoại này đã đăng ký", "warning")
+            return redirect(url_for("customer.profile"))
+
+    user.name = name
+    user.address = address
+    user.phone = phone or None
+    db.session.commit()
+    flash("Cập nhật hồ sơ thành công.", "success")
+    return redirect(url_for("customer.profile"))
+
+
+# === Đổi mật khẩu ===
+@customer_bp.route("/profile/password", methods=["POST"])
+def profile_change_password():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    old_pw = request.form.get("old_password") or ""
+    new_pw = request.form.get("new_password") or ""
+    confirm = request.form.get("confirm_password") or ""
+
+    if user.password:
+        if not check_password_hash(user.password, old_pw):
+            flash("Mật khẩu hiện tại không đúng.", "danger")
+            return redirect(url_for("customer.profile_page"))
+    # nếu account OAuth chưa có password, cho phép đặt mới không cần old_pw
+
+    if len(new_pw) < 6:
+        flash("Mật khẩu mới tối thiểu 6 ký tự.", "warning")
+        return redirect(url_for("customer.profile_page"))
+    if new_pw != confirm:
+        flash("Xác nhận mật khẩu không khớp.", "warning")
+        return redirect(url_for("customer.profile"))
+
+    user.password = generate_password_hash(new_pw)
+    db.session.commit()
+    flash("Đổi mật khẩu thành công.", "success")
+    return redirect(url_for("customer.profile"))

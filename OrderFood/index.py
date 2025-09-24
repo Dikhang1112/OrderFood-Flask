@@ -3,10 +3,13 @@ import os, traceback
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from OrderFood import app, db
+from OrderFood.customer_service import PHONE_RE, get_user_by_phone
 from OrderFood.dao import *
 from OrderFood.dao_index import get_restaurants_by_name, get_restaurants_by_dishes_name, get_star_display, \
     get_user_by_email, create_user, get_active_cart, add_cart_item, count_cart_items
 from OrderFood.models import Restaurant, Customer, Cart, StatusCart
+
+
 
 # --- Helpers ---
 ENUM_UPPERCASE = True
@@ -71,20 +74,48 @@ def index():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
-        role = norm_role_for_db(request.form.get("role", "customer"))
-        password = request.form.get("password", "")
+        form = request.form  # giữ lại để render khi lỗi
+        name = (form.get("name") or "").strip()
+        email = (form.get("email") or "").strip().lower()
+        phone = (form.get("phone") or "").strip()
+        role  = norm_role_for_db(form.get("role", "customer"))
+        password = form.get("password") or ""
+        confirm  = form.get("confirm_password") or ""
 
-        if not email or not password:
-            flash("Email và mật khẩu là bắt buộc", "danger")
-            return redirect(url_for("register"))
+        # Dữ liệu giữ lại (không giữ password vì bảo mật)
+        keep = {"form_data": {"name": name, "email": email, "phone": phone, "role": form.get("role")}, "panel": "signup"}
 
+        # --- Validate bắt buộc ---
+        if not name:
+            flash("Tên không được để trống", "warning")
+            return render_template("auth.html", **keep)
+        if not email:
+            flash("Email là bắt buộc", "danger")
+            return render_template("auth.html", **keep)
+        if not phone:
+            flash("Số điện thoại là bắt buộc", "danger")
+            return render_template("auth.html", **keep)
+        if not PHONE_RE.match(phone):
+            flash("Số điện thoại không hợp lệ. Yêu cầu 10 số và bắt đầu bằng 0.", "warning")
+            return render_template("auth.html", **keep)
+
+        # --- Check tồn tại ---
         if get_user_by_email(email):
             flash("Email đã tồn tại", "warning")
-            return redirect(url_for("register"))
+            return render_template("auth.html", **keep)
+        if get_user_by_phone(phone):
+            flash("Số điện thoại này đã đăng ký", "warning")
+            return render_template("auth.html", **keep)
 
+        # --- Mật khẩu: độ dài trước, rồi mới khớp ---
+        if len(password) < 6:
+            flash("Mật khẩu tối thiểu 6 ký tự", "warning")
+            return render_template("auth.html", **keep)
+        if password != confirm:
+            flash("Mật khẩu xác nhận không khớp", "warning")
+            return render_template("auth.html", **keep)
+
+        # --- Tạo tài khoản ---
         hashed = generate_password_hash(password)
         create_user(name=name, email=email, phone=phone, hashed_password=hashed, role=role)
 
@@ -95,11 +126,9 @@ def register():
         session["role"] = (getattr(user.role, "value", user.role) or "").lower()
 
         flash("Đăng ký thành công! Bạn đã được đăng nhập.", "success")
-        if is_owner(user.role):
-            return redirect(url_for("owner.owner_home"))
-        return redirect(url_for("index"))
+        return redirect(url_for("owner.owner_home") if is_owner(user.role) else url_for("index"))
 
-    return render_template("auth.html")
+    return render_template("auth.html", panel="signup")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -109,7 +138,7 @@ def login():
         password = request.form.get("password", "")
         user = get_user_by_email(email)
         if not user or not check_password_hash(user.password, password):
-            flash("Sai email hoặc mật khẩu", "danger")
+            flash("Tài khoản hoặc mật khẩu không chính xác.", "danger")
             return redirect(url_for("login"))
 
         session["user_id"] = user.user_id

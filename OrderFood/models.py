@@ -64,9 +64,11 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     password = db.Column(db.String(255), nullable=True)
     avatar = db.Column(db.String(255))  # lưu URL từ Cloudinary
-    phone = db.Column(db.String(20))
+
 
     role = db.Column(SAEnum(Role, name="role_enum"), nullable=False, default=Role.CUSTOMER)
+    address = db.Column(db.String(255))
+    phone = db.Column(db.String(10), nullable=True, index=True,unique=True,)
 
     customer = db.relationship("Customer", uselist=False, back_populates="user", cascade="all, delete-orphan")
     restaurant_owner = db.relationship("RestaurantOwner", uselist=False, back_populates="user",

@@ -23,7 +23,7 @@ scheduler = BackgroundScheduler(timezone="Asia/Ho_Chi_Minh", daemon=True)
 _SCHEDULER_STARTED = False  # chống start 2 lần
 
 # ================== ENV & defaults ==================
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",

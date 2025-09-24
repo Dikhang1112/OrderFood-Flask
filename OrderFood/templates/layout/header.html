@@ -86,10 +86,10 @@
               <li><hr class="dropdown-divider"></li>
 
               {% if r == 'customer' %}
-                <li><a class="dropdown-item" href="{{ url_for('customer.customer_home') }}">Trang khách hàng</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('customer.profile_page') }}">Trang khách hàng</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('customer.my_orders') }}">Đơn của tôi</a></li>
               {% elif r == 'restaurant_owner' %}
-                <li><a class="dropdown-item" href="{{ url_for('owner.owner_home') }}">Trang chủ quán</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('customer.profile_page') }}">Trang chủ quán</a></li>
               {% elif r == 'admin' %}
                 <li><a class="dropdown-item" href="{{ url_for('admin.admin_home') }}">Trang admin</a></li>
               {% endif %}

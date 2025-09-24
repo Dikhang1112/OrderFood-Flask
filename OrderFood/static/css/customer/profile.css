@@ -1,0 +1,28 @@
+.of-card {
+  border: 0;
+  border-radius: 1rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  background: #111; /* nền tối đồng bộ header */
+  color: #eee;
+}
+.of-card__header {
+  background: linear-gradient(90deg, #ff7a18, #af002d 70%);
+  color: #fff;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+.form-control, .form-select, textarea {
+  background: #1a1a1a;
+  color: #eaeaea;
+  border: 1px solid #333;
+}
+.form-control:focus, textarea:focus {
+  border-color: #ff7a18;
+  box-shadow: 0 0 0 .2rem rgba(255,122,24,.25);
+}
+.btn-primary {
+  background: #ff7a18; border: none;
+}
+.btn-warning {
+  background: #f59e0b; border: none; color: #111;
+}

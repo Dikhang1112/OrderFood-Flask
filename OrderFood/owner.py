@@ -14,6 +14,7 @@ def is_owner(role):
     return (role or "").lower() == "restaurant_owner"
 
 # ================= Owner Home =================
+
 @owner_bp.route("/")
 def owner_home():
     if not is_owner(session.get("role")):
