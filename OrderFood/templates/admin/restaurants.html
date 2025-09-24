@@ -46,47 +46,58 @@
 
             <tbody class="rs-body">
             {% for r in restaurants %}
-            <tr class="rs-row"
-                onclick="window.location='{{ url_for('admin.restaurant_detail', restaurant_id=r.restaurant_id) }}'"
-                style="cursor:pointer">
-                <td class="rs-col rs-col--id">
-                    <div class="rs-id">#{{ r.restaurant_id }}</div>
-                </td>
+            <tr class="rs-row" style="cursor:pointer">
+  <!-- Anchor overlay phủ toàn bộ hàng (trừ vùng Action nhờ z-index) -->
+  <a class="row-link"
+     href="{{ url_for('admin.restaurant_detail', restaurant_id=r.restaurant_id) }}"></a>
 
-                <td class="rs-col rs-col--name">
-                    <div class="rs-card">
-                        <div class="rs-info">
-                            <div class="rs-title">{{ r.name }}</div>
-                            {% if r.owner and r.owner.user %}
-                            <div class="rs-sub">Owner: {{ r.owner.user.email }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </td>
+  <td class="rs-col rs-col--id">
+    <div class="rs-id">#{{ r.restaurant_id }}</div>
+  </td>
 
-                <td class="rs-col rs-col--addr">{{ r.address or "—" }}</td>
+  <td class="rs-col rs-col--name">
+    <div class="rs-card">
+      <div class="rs-info">
+        <div class="rs-title">{{ r.name }}</div>
+        {% if r.owner and r.owner.user %}
+        <div class="rs-sub">Owner: {{ r.owner.user.email }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </td>
 
-                <td class="rs-col rs-col--status">
-                    {% if r.status %}
-                    <span class="rs-badge rs-badge--{{ 'ok' if r.status.value=='APPROVED'
-                                         else 'warn' if r.status.value=='PENDING'
-                                         else 'err' }}">{{ r.status.value }}</span>
-                    {% endif %}
-                </td>
+  <td class="rs-col rs-col--addr">{{ r.address or "—" }}</td>
 
-                <td class="rs-col rs-col--rating">
-                    {{ "{:.1f}".format(r.rating_point) if r.rating_point else "Không" }}🌟
-                </td>
+  <td class="rs-col rs-col--status">
+    {% if r.status %}
+    <span class="rs-badge rs-badge--{{ 'ok' if r.status.value=='APPROVED'
+                         else 'warn' if r.status.value=='PENDING'
+                         else 'err' }}">{{ r.status.value }}</span>
+    {% endif %}
+  </td>
 
-                <td class="rs-col rs-col--action">
-                    <button class="rs-action rs-action--approve" title="Approve" data-id="{{ r.restaurant_id }}">
-                        ✅
-                    </button>
-                    <button class="rs-action rs-action--reject" title="Reject" data-id="{{ r.restaurant_id }}">
-                        ❌
-                    </button>
-                </td>
-            </tr>
+  <td class="rs-col rs-col--rating">
+    {{ "{:.1f}".format(r.rating_point) if r.rating_point else "Không" }}🌟
+  </td>
+
+  <td class="rs-col rs-col--action">
+  {% if r.status and r.status.value == 'PENDING' %}
+    <button type="button"
+            class="rs-action rs-action--approve"
+            title="Approve"
+            data-id="{{ r.restaurant_id }}"
+            onclick="event.stopPropagation();">✅</button>
+
+    <button type="button"
+            class="rs-action rs-action--reject"
+            title="Reject"
+            data-id="{{ r.restaurant_id }}"
+            onclick="event.stopPropagation();">❌</button>
+  {% else %}
+    <!-- Không hiển thị nút khi không còn Pending (để trống cho thẳng hàng) -->
+  {% endif %}
+</td>
+</tr>
             {% else %}
             <tr>
                 <td colspan="6" class="text-center text-muted py-4">Không có nhà hàng nào.</td>
@@ -96,13 +107,16 @@
 
         </table>
 
-        {% if noti_assets is defined %}
-        {{ noti_assets() }}
-        {% else %}
-        <div id="toast-stack"></div>
-        <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
-        <script src="{{ url_for('static', filename='js/admin/manageRestaurant.js') }}"></script>
-        {% endif %}
+       {# luôn có chỗ để toast #}
+<div id="toast-stack"></div>
+
+{# nếu có macro noti_assets thì render thêm, nhưng KHÔNG phụ thuộc vào nó để load JS #}
+{% if noti_assets is defined %}
+  {{ noti_assets() }}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin/manageRestaurant.js') }}?v=3"></script>
     </div>
 
 </main>

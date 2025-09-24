@@ -7,19 +7,22 @@
   --rs-warn: #f59e0b;
   --rs-err: #ef4444;
   --rs-accent: #22d3ee;
-  --rs-cols: 64px 180px 180px 160px 180px 140px; /* ID | name | addr | status | rating | action */
+
+  /* ID | name | addr | status | rating | action */
+  --rs-cols: 60px 280px 280px 200px 240px 200px;
 }
-}
+
+/* Bảng */
 .rs-table{
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-/* Header giữ dạng hàng đơn giản */
+/* Header */
 .rs-row-head{
   display:grid;
-  grid-template-columns: 60px 280px 280px 200px 240px 200px;
+  grid-template-columns: var(--rs-cols);
   align-items:center;
   background:#111827;
   color:#e5e7eb;
@@ -31,11 +34,13 @@
   white-space:nowrap;
   width:auto;
   text-align:left;
+  border: none !important;
 }
-/* Body: mỗi <tr> sẽ hiển thị như card + grid */
+
+/* Body: mỗi <tr> = card + grid */
 .rs-body .rs-row{
   display: grid;
-  grid-template-columns: 60px 250px 280px 180px 220px 250px;
+  grid-template-columns: var(--rs-cols);
   gap: var(--rs-gap);
   align-items: center;
   background: #fff;
@@ -44,6 +49,11 @@
   border-radius: 14px;
   padding: 12px;
   box-shadow: 0 6px 18px rgba(2,8,20,.04);
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .05s ease;
+}
+.rs-body .rs-row:hover{
+  box-shadow: 0 10px 28px rgba(2,8,20,.08);
 }
 .rs-body .rs-row td{
   border: none !important;
@@ -54,7 +64,7 @@
 .rs-id{
   font-weight: 700;
   color: #111827;
-  font-size: 14px;     /* tùy chọn: làm nhỏ chữ */
+  font-size: 14px;
 }
 
 /* Card name + thumbnail */
@@ -102,7 +112,8 @@
 .rs-badge--warn{ background: var(--rs-warn); }
 .rs-badge--err{ background: var(--rs-err); }
 
-/* Action buttons */
+/* Action buttons (nâng lớp để không dính click cả hàng) */
+.rs-col--action{ position: relative; z-index: 5; }
 .ic{ width: 18px; height: 18px; display: inline-block; }
 
 .rs-action{
@@ -121,16 +132,12 @@
 .rs-action--approve:hover{ background: rgba(22,163,74,.09); color: #065f46; }
 .rs-action--reject:hover{ background: rgba(239,68,68,.09); color: #991b1b; }
 
-/* Responsive: thu hẹp cột để vừa mobile */
+/* Responsive */
 @media (max-width: 1200px){
-  .rs-body .rs-row{
-    grid-template-columns: 70px 1.3fr 1fr 120px 90px 110px;
-  }
+  :root{ --rs-cols: 70px 1.3fr 1fr 140px 120px 140px; }
 }
 @media (max-width: 992px){
-  .rs-body .rs-row{
-    grid-template-columns: 60px 1fr 1fr 110px 80px 100px;
-  }
+  :root{ --rs-cols: 60px 1fr 1fr 120px 100px 120px; }
   .rs-card{ grid-template-columns: 56px 1fr; }
   .rs-thumb, .rs-thumb--placeholder{ width:56px; height:56px; }
 }
@@ -144,9 +151,9 @@
   .rs-col--status{ order: 4; }
   .rs-col--rating{ order: 5; }
   .rs-col--action{ order: 6; }
-  .rs-col--addr{ display:none; } /* ẩn địa chỉ trên mobile, có thể bật nếu muốn */
+  .rs-col--addr{ display:none; } /* ẩn địa chỉ trên mobile */
 }
 
-/* Ẩn đường kẻ bảng mặc định */
-.rs-table .table-dark{ display: table-header-group; } /* vẫn hiện header */
+/* Ẩn đường kẻ header mặc định nếu có .table-dark */
+.rs-table .table-dark{ display: table-header-group; }
 .table-dark th{ border: none !important; }
