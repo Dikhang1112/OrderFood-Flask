@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7b4c69b2-120e-48e2-80ef-33c77f6d8e73" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/customer_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/customer_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/static/js/customer/cart.js" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/static/js/customer/cart.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/customer/cart.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/customer/cart.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/templates/customer/restaurant_detail.html" afterDir="false" />
-    </list>
+    <list default="true" id="7b4c69b2-120e-48e2-80ef-33c77f6d8e73" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -41,6 +35,7 @@
     "Python.index.executor": "Run",
     "Python.owner.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "QLKH",
     "last_opened_file_path": "C:/Users/DUNG/Desktop"
