@@ -7,6 +7,8 @@ from OrderFood import db
 from datetime import datetime
 from sqlalchemy import func
 
+from OrderFood.notifications import push_customer_noti_on_owner_cancel
+
 owner_bp = Blueprint("owner", __name__, url_prefix="/owner")
 
 # ================= Helpers =================
@@ -225,30 +227,27 @@ def approve_order(order_id):
 @owner_bp.route("/orders/<int:order_id>/cancel", methods=["POST"])
 def cancel_order(order_id):
     order = Order.query.get_or_404(order_id)
-    data = request.get_json() or {}
-    reason = data.get("reason", "")
+    data = request.get_json(silent=True) or {}
+    reason = (data.get("reason") or "").strip()
 
-    if isinstance(order.status, str):
-        order.status = StatusOrder.CANCELED.value
-    else:
-        order.status = StatusOrder.CANCELED
+    # Chỉ cho phép hủy khi đang PAID hoặc ACCEPTED (tùy bạn, có thể nới lỏng)
+    allowed = {StatusOrder.PAID, StatusOrder.ACCEPTED}
+    curr = order.status if not isinstance(order.status, str) else StatusOrder[order.status]
+    if curr not in allowed:
+        return jsonify({"error": "Chỉ hủy đơn ở trạng thái PAID/ACCEPTED"}), 400
 
+    # Cập nhật trạng thái + đánh dấu người hủy
+    order.status = StatusOrder.CANCELED
+    order.canceled_by = Role.RESTAURANT_OWNER
     db.session.add(order)
-
-    if order.payment:
-        refund = Refund(
-            payment_id=order.payment.payment_id,
-            reason=reason,
-            requested_by=Role.ADMIN,
-            created_at=datetime.utcnow(),
-            status=StatusRefund.REQUESTED
-        )
-        db.session.add(refund)
-
     db.session.commit()
+
+    # Gửi thông báo cho KH
+    push_customer_noti_on_owner_cancel(order, reason)
+
     return jsonify({
         "order_id": order.order_id,
-        "status": getattr(order.status, "value", order.status),
+        "status": order.status.value,
         "customer_name": order.customer.user.name,
         "reason": reason
     })
