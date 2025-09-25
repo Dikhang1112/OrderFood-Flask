@@ -227,8 +227,7 @@ def stats_users_owners():
     if not is_admin(session.get("role")):
         return jsonify({"error": "forbidden"}), 403
 
-    # Lấy tham số query
-    period = request.args.get("period", "month")  # month / quarter / year
+    period = request.args.get("period", "month")
     year = int(request.args.get("year", datetime.now().year))
 
     labels, users, owners = [], [], []
@@ -271,19 +270,6 @@ def stats_users_owners():
             users.append(u_count)
             owners.append(o_count)
 
-    elif period == "year":
-        # Chỉ có 1 cột cho cả năm
-        labels = [str(year)]
-        u_count = db.session.query(func.count(Customer.user_id)) \
-            .join(User, Customer.user_id == User.user_id) \
-            .filter(extract("year", User.created_date) == year) \
-            .scalar() or 0
-        o_count = db.session.query(func.count(RestaurantOwner.user_id)) \
-            .join(User, RestaurantOwner.user_id == User.user_id) \
-            .filter(extract("year", User.created_date) == year) \
-            .scalar() or 0
-        users.append(u_count)
-        owners.append(o_count)
 
     return jsonify({
         "labels": labels,
@@ -324,14 +310,6 @@ def stats_transactions():
                 .scalar() or 0
             transactions.append(t_count)
 
-    elif period == "year":
-        labels = [str(year)]
-        t_count = db.session.query(func.count(Order.order_id)) \
-            .filter(extract("year", Order.created_date) == year,
-                    Order.status == StatusOrder.COMPLETED) \
-            .scalar() or 0
-        transactions.append(t_count)
-
     return jsonify({
         "labels": labels,
         "transactions": transactions
@@ -355,36 +333,35 @@ def manage_user():
 @admin_bp.route("/<int:user_id>/delete_customer", methods=["DELETE"])
 def delete_customer(user_id: int):
     try:
-        # Lấy customer
         customer = Customer.query.get(user_id)
         if not customer:
             return jsonify({"error": "not_found"}), 404
 
-        # 1. Xóa các Payment liên quan đến Order
+        # Xóa  Payment liên quan đến cus
         for order in customer.orders:
             if order.payment:
                 db.session.delete(order.payment)
 
-        # 2. Xóa OrderRating
+        # Xóa orderating của cus
         for rating in customer.ratings:
             db.session.delete(rating)
 
-        # 3. Xóa Notification
+        #  Xóa Notification
         notifications = Notification.query.filter_by(customer_id=user_id).all()
         for noti in notifications:
             db.session.delete(noti)
 
-        # 4. Xóa Order
+        # Xóa Order
         for order in customer.orders:
             db.session.delete(order)
 
-        # 5. Xóa CartItem + Cart
+        #  Xóa CartItem + Cart
         for cart in customer.carts:
             for item in cart.items:
                 db.session.delete(item)
             db.session.delete(cart)
 
-        # 6. Xóa Customer và User
+        #  Xóa Customer và User
         db.session.delete(customer)
         db.session.delete(customer.user)
 
@@ -405,7 +382,6 @@ def delete_owner(user_id: int):
         return jsonify({"error": "not_found"}), 404
 
     try:
-        # Xóa restaurant trước, cascade sẽ xóa restaurant_owner và user
         if user.restaurant_owner:
             if user.restaurant_owner.restaurant:
                 db.session.delete(user.restaurant_owner.restaurant)
