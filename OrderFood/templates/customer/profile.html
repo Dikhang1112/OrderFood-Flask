@@ -2,96 +2,107 @@
 {% block title %}Hồ sơ khách hàng{% endblock %}
 
 {% block content %}
-
-
 <link rel="stylesheet" href="{{ url_for('static', filename='css/customer/profile.css') }}"/>
 
 <div class="container my-4">
-    <div class="row g-4">
+  <div class="row g-4">
 
-        <!-- Thông tin cá nhân -->
-        <div class="col-lg-6">
-            <div class="card of-card">
-                <div class="card-header of-card__header">
-                    <h5 class="mb-0">Thông tin cá nhân</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{{ url_for('customer.profile_update') }}">
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input
-                                    type="email"
-                                    class="form-control"
-                                    value="{{ user.email }}"
-                                    readonly
-                                    autocomplete="email"
-                            >
-                            <div class="form-text">Email không thể thay đổi.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Tên</label>
-                            <input
-                                    name="name"
-                                    class="form-control"
-                                    value="{{ user.name or '' }}"
-                                    required
-                                    autocomplete="name"
-                            >
-                        </div>
-                        <input name="phone" class="form-control" value="{{ user.phone or '' }}"
-       placeholder="Ví dụ: 0901234567" inputmode="numeric" pattern="^0\d{9}$" maxlength="10" autocomplete="tel">
-
-                        <div class="mb-3">
-                            <label class="form-label">Địa chỉ giao hàng</label>
-                            <textarea
-                                    name="address"
-                                    class="form-control"
-                                    rows="3"
-                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                                    autocomplete="street-address"
-                            >{{- user.address or '' -}}</textarea>
-                        </div>
-
-                        <div class="d-grid">
-                            <button class="btn btn-primary">Lưu thay đổi</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Ảnh đại diện (Upload Cloudinary) -->
+    <div class="col-lg-4">
+      <div class="card of-card">
+        <div class="card-header of-card__header">
+          <h5 class="mb-0">Ảnh đại diện</h5>
         </div>
+        <div class="card-body text-center">
+          <img
+            src="{{ user.avatar or url_for('static', filename='img/default-avatar.png') }}"
+            alt="Avatar"
+            class="rounded-circle mb-3"
+            style="width: 140px; height: 140px; object-fit: cover;"
+          >
 
-        <!-- Đổi mật khẩu -->
-        <div class="col-lg-6">
-            <div class="card of-card">
-                <div class="card-header of-card__header">
-                    <h5 class="mb-0">Đổi mật khẩu</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{{ url_for('customer.profile_change_password') }}">
-                        <div class="mb-3">
-                            <label class="form-label">Mật khẩu hiện tại</label>
-                            <input name="old_password" type="password" class="form-control"
-                                   placeholder="Nếu tài khoản tạo bằng Google có thể bỏ trống">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Mật khẩu mới</label>
-                            <input name="new_password" type="password" class="form-control" required minlength="6">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Xác nhận mật khẩu mới</label>
-                            <input name="confirm_password" type="password" class="form-control" required minlength="6">
-                        </div>
-                        <div class="d-grid">
-                            <button class="btn btn-warning">Cập nhật mật khẩu</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+          <form method="post"
+                action="{{ url_for('customer.profile_upload_avatar') }}"
+                enctype="multipart/form-data"
+                class="d-grid gap-2">
+
+            <input class="form-control" type="file" name="avatar" accept="image/*" required>
+            <small class="text-muted">Hỗ trợ JPG/PNG/GIF, &lt; 5MB.</small>
+
+            <button class="btn btn-outline-primary mt-2">Tải ảnh lên</button>
+          </form>
         </div>
-
+      </div>
     </div>
+
+    <!-- Thông tin cá nhân -->
+    <div class="col-lg-8">
+      <div class="card of-card">
+        <div class="card-header of-card__header">
+          <h5 class="mb-0">Thông tin cá nhân</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('customer.profile_update') }}">
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" value="{{ user.email }}" readonly autocomplete="email">
+              <div class="form-text">Email không thể thay đổi.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Tên</label>
+              <input name="name" class="form-control" value="{{ user.name or '' }}" required autocomplete="name">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Số điện thoại</label>
+              <input name="phone" class="form-control" value="{{ user.phone or '' }}"
+                     placeholder="Ví dụ: 0901234567" inputmode="numeric"
+                     pattern="^0\d{9}$" maxlength="10" autocomplete="tel">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Địa chỉ giao hàng</label>
+              <textarea name="address" class="form-control" rows="3"
+                        placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                        autocomplete="street-address">{{- user.address or '' -}}</textarea>
+            </div>
+
+            <div class="d-grid">
+              <button class="btn btn-primary">Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Đổi mật khẩu -->
+      <div class="card of-card mt-4">
+        <div class="card-header of-card__header">
+          <h5 class="mb-0">Đổi mật khẩu</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('customer.profile_change_password') }}">
+            <div class="mb-3">
+              <label class="form-label">Mật khẩu hiện tại</label>
+              <input name="old_password" type="password" class="form-control"
+                     placeholder="Nếu tài khoản tạo bằng Google có thể bỏ trống">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mật khẩu mới</label>
+              <input name="new_password" type="password" class="form-control" required minlength="6">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Xác nhận mật khẩu mới</label>
+              <input name="confirm_password" type="password" class="form-control" required minlength="6">
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-warning">Cập nhật mật khẩu</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
-
-
 {% endblock %}

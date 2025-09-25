@@ -379,3 +379,45 @@ def profile_change_password():
     db.session.commit()
     flash("Đổi mật khẩu thành công.", "success")
     return redirect(url_for("customer.profile"))
+import cloudinary.uploader
+
+@customer_bp.route("/profile/avatar", methods=["POST"])
+def profile_upload_avatar():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    file = request.files.get("avatar")
+    if not file or file.filename == "":
+        flash("Vui lòng chọn một hình ảnh.", "warning")
+        return redirect(url_for("customer.profile_page"))
+
+    # kiểm tra cơ bản
+    if not (file.mimetype or "").startswith("image/"):
+        flash("Tệp tải lên phải là hình ảnh.", "danger")
+        return redirect(url_for("customer.profile_page"))
+
+    try:
+        # upload lên Cloudinary
+        result = cloudinary.uploader.upload(
+            file,
+            folder="orderfood/avatars",
+            public_id=f"user_{uid}",
+            overwrite=True,
+            resource_type="image",
+        )
+        secure_url = result.get("secure_url")
+        if not secure_url:
+            raise RuntimeError("Upload không trả về URL")
+
+        user = User.query.get(uid)
+        user.avatar = secure_url
+        db.session.commit()
+        flash("Cập nhật ảnh đại diện thành công.", "success")
+    except Exception as e:
+        db.session.rollback()
+        print("Cloudinary upload error:", e)
+        flash("Không thể tải ảnh lên. Vui lòng thử lại.", "danger")
+
+    return redirect(url_for("customer.profile_page"))
