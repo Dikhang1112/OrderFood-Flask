@@ -16,7 +16,7 @@ class MyTestCase(unittest.TestCase):
 
     # ----------------- Tests -----------------
 
-    def test_is_admin():
+    def test_is_admin(self):
         from enum import Enum
 
         class RoleEnum(Enum):

@@ -2,7 +2,7 @@ import unittest
 import pytest
 from unittest.mock import patch, MagicMock
 from flask import session, url_for
-from OrderFood.customer import customer_bp, is_customer, is_restaurant_open
+from OrderFood.customer_service import customer_bp, is_customer, is_restaurant_open
 from datetime import time, datetime
 
 
@@ -16,7 +16,7 @@ class MyTestCase(unittest.TestCase):
             yield client
 
     # ---------------- Helpers ----------------
-    def test_is_customer():
+    def test_is_customer(self):
         assert is_customer("customer") is True
         assert is_customer("CUSTOMER") is True
         assert is_customer("admin") is False
