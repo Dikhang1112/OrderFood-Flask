@@ -27,7 +27,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
-    "mysql+pymysql://orderfood:%s@172.31.46.106/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
+    # "mysql+pymysql://orderfood:%s@172.31.46.106/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
+    "mysql+pymysql://root:%s@localhost/orderfooddb?charset=utf8mb4" % quote("Admin@123"),
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "false").lower() == "true"
 

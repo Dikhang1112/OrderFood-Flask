@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7b4c69b2-120e-48e2-80ef-33c77f6d8e73" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/OrderFood-Flask.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/cicd.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/cicd.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/OrderFood/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/OrderFood/__init__.py" afterDir="false" />
     </list>
@@ -40,7 +39,7 @@
     "Python.index.executor": "Run",
     "Python.owner.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "develop",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "C:/Users/DUNG/Desktop",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
