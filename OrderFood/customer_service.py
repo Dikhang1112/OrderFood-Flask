@@ -329,24 +329,24 @@ def profile_update():
 
     if not name:
         flash("Tên không được để trống.", "danger")
-        return redirect(url_for("customer.profile"))
+        return redirect(url_for("customer.profile_page"))
 
     if phone and not PHONE_RE.match(phone):
         flash("Số điện thoại không hợp lệ. Yêu cầu 10 số và bắt đầu bằng 0.", "warning")
-        return redirect(url_for("customer.profile"))
+        return redirect(url_for("customer.profile_page"))
 
     if phone:
         exists = User.query.filter(User.phone == phone, User.user_id != uid).first()
         if exists:
             flash("Số điện thoại này đã đăng ký", "warning")
-            return redirect(url_for("customer.profile"))
+            return redirect(url_for("customer.profile_page"))
 
     user.name = name
     user.address = address
     user.phone = phone or None
     db.session.commit()
     flash("Cập nhật hồ sơ thành công.", "success")
-    return redirect(url_for("customer.profile"))
+    return redirect(url_for("customer.profile_page"))
 
 
 # === Đổi mật khẩu ===
