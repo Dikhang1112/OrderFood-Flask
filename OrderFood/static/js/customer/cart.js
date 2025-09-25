@@ -1,8 +1,4 @@
-// =========================================
-// Cart.js - xử lý popup thêm món vào giỏ
-// =========================================
 
-// Mở modal món ăn
 function openDishModal(dish_id, name, image, price, note, restaurant_id) {
     // Điền dữ liệu vào modal
     document.getElementById("dishModalTitle").textContent = name;
@@ -19,19 +15,17 @@ function openDishModal(dish_id, name, image, price, note, restaurant_id) {
         const userNote = document.getElementById("dishModalUserNote").value || '';
         addToCart(dish_id, restaurant_id, qty, userNote);
 
-        // Đóng modal
         const modalEl = document.getElementById("dishModal");
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
     }
 
-    // Hiển thị modal
     const modalEl = document.getElementById("dishModal");
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
 }
 
-// Thêm món vào giỏ hàng qua API
+// Thêm món ăn
 function addToCart(dish_id, restaurant_id, quantity = 1, note = "") {
     fetch('/api/cart', {
         method: "POST",
@@ -81,7 +75,7 @@ function updateCartCount(count) {
 }
 
 
-// Gắn sự kiện cho các nút "+" trên danh sách món
+// mở DishModal thông qua +
 document.querySelectorAll('.add-dish-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -96,10 +90,6 @@ document.querySelectorAll('.add-dish-btn').forEach(btn => {
     });
 });
 
-// Cho phép gọi từ HTML
-window.addToCart = addToCart;
-window.openDishModal = openDishModal;
-window.updateCartCount = updateCartCount;
 
 document.addEventListener('DOMContentLoaded', () => {
     const table = document.querySelector('.ct-table');
@@ -169,3 +159,8 @@ function deleteCartItem(itemId, row) {
     })
     .catch(err => console.error(err));
 }
+
+window.addToCart = addToCart;
+window.openDishModal = openDishModal;
+window.updateCartCount = updateCartCount;
+
