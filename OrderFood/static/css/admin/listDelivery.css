@@ -1,9 +1,17 @@
 :root {
   --bd: rgba(0,0,0,.08);
-  --ok:#16a34a;
-  --warn:#f59e0b;
-  --err:#ef4444;
+  --ok:#16a34a;      /* xanh lá đậm (Approved) */
+  --warn:#f59e0b;    /* vàng cam (Pending) */
+  --err:#ef4444;     /* đỏ lỗi chung */
+  --accepted:#22c55e; /* xanh lá sáng (Accepted) */
+  --cancel:#dc2626;   /* đỏ tươi (Cancel) */
+  --complete:#2563eb; /* xanh dương (Completed) */
 }
+
+.rs-badge--accepted { background: var(--accepted); }
+.rs-badge--cancel   { background: var(--cancel); }
+.rs-badge--complete { background: var(--complete); }
+
 
 /* ================== TABLE ================== */
 .rs-table {
@@ -92,4 +100,7 @@ form button {
 .rs-table .btn.btn-success.btn-sm {
   padding: 4px 10px;
   line-height: 1.2;
+}
+.btn-primary {
+margin:10px;
 }
