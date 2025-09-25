@@ -34,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ======== API gọi như bạn đã viết trước đó ========
     function loadRevenueSummary() {
         fetch(`/api/owner/${restaurantId}/stats/revenue`)
             .then(res => res.json())
