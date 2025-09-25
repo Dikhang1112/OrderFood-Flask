@@ -4,14 +4,14 @@ let transactionChartInstance = null;
 // ========== User & Owner Chart ==========
 function loadUserOwnerChart() {
     const period = document.getElementById("userOwnerPeriod").value;
-    const year = new Date().getFullYear(); // dùng năm hiện tại
+    const year = new Date().getFullYear(); 
 
     fetch(`/admin/api/stats/users-owners?period=${period}&year=${year}`)
         .then(res => res.json())
         .then(data => {
             const ctx = document.getElementById("userOwnerChart").getContext("2d");
 
-            // Destroy chart cũ nếu đã tồn tại
+            // xóa chart cũ nếu đã tồn tại
             if (userOwnerChartInstance) {
                 userOwnerChartInstance.destroy();
             }
@@ -71,13 +71,10 @@ function loadTransactionChart() {
 
 // ========== Event Listeners ==========
 document.addEventListener("DOMContentLoaded", () => {
-    // Load ban đầu
     loadUserOwnerChart();
     loadTransactionChart();
 
-    // User & Owner dropdown onchange
     document.getElementById("userOwnerPeriod").addEventListener("change", loadUserOwnerChart);
 
-    // Transaction dropdown onchange
     document.getElementById("transactionPeriod").addEventListener("change", loadTransactionChart);
 });
