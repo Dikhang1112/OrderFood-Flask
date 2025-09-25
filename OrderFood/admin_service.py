@@ -56,7 +56,7 @@ def restaurant_detail(restaurant_id: int):
     if not res:
         flash("Không tìm thấy nhà hàng.", "warning")
         return redirect(url_for("admin.admin_restaurant"))
-    # Gợi ý: tạo template 'admin/restaurant_detail.html'
+
     return render_template("admin/restaurant_detail.html", res=res)
 
 

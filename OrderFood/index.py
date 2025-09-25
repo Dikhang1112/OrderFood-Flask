@@ -216,5 +216,5 @@ def cart_route(restaurant_id):
     return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
 # deploy thì bỏ nguyên cái if này đi
 
-#if __name__ == "__main__":
-    #app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

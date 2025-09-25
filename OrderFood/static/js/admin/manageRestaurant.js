@@ -1,6 +1,5 @@
 // static/js/admin/manageRestaurant.js
 (function () {
-  // ===== Helpers =====
   function findRow(el) {
     return el.closest(".rs-row") || el.closest("tr");
   }
@@ -40,42 +39,44 @@
   }
 
   document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".rs-action");
-  if (!btn) return;
+    const btn = e.target.closest(".rs-action");
+    if (!btn) return;
 
-  e.stopPropagation();
-  e.preventDefault();
+    e.stopPropagation();
+    e.preventDefault();
 
-  const id = btn.getAttribute("data-id");
-  if (!id) return;
-  const row = btn.closest(".rs-row") || btn.closest("tr");
+    const id = btn.getAttribute("data-id");
+    console.log("Clicked restaurant id:", id); // DEBUG
+    if (!id) return;
 
-  try {
-    if (btn.classList.contains("rs-action--reject")) {
-      if (!confirm("Bạn có chắc muốn TỪ CHỐI nhà hàng này?")) return;
-      const reason = prompt("Lí do từ chối:");
-      if (reason == null || !reason.trim()) return;
+    const row = btn.closest(".rs-row") || btn.closest("tr");
 
-      setLoading(btn, true);
-      const data = await callPatch(`/admin/restaurants/${id}/reject`, { reason: reason.trim() });
-      setStatusBadge(row, (data && data.status) || "REJECTED");
-      window.Toast?.success?.("Đã từ chối nhà hàng");
-      return;
+    try {
+      if (btn.classList.contains("rs-action--reject")) {
+        if (!confirm("Bạn có chắc muốn TỪ CHỐI nhà hàng này?")) return;
+        const reason = prompt("Lí do từ chối:");
+        if (reason == null || !reason.trim()) return;
+
+        setLoading(btn, true);
+        const data = await callPatch(`/admin/restaurants/${id}/reject`, { reason: reason.trim() });
+        setStatusBadge(row, (data && data.status) || "REJECTED");
+        window.Toast?.success?.("Đã từ chối nhà hàng");
+        return;
+      }
+
+      if (btn.classList.contains("rs-action--approve")) {
+        if (!confirm("Bạn có chắc muốn DUYỆT nhà hàng này?")) return;
+        setLoading(btn, true);
+        const data = await callPatch(`/admin/restaurants/${id}/approve`);
+        setStatusBadge(row, (data && data.status) || "APPROVED");
+        window.Toast?.success?.("Duyệt nhà hàng thành công");
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+      window.Toast?.error?.("Không thể thực hiện. Vui lòng thử lại.");
+    } finally {
+      setLoading(btn, false);
     }
-
-    if (btn.classList.contains("rs-action--approve")) {
-      if (!confirm("Bạn có chắc muốn DUYỆT nhà hàng này?")) return;  // <--- thêm dòng này
-      setLoading(btn, true);
-      const data = await callPatch(`/admin/restaurants/${id}/approve`);
-      setStatusBadge(row, (data && data.status) || "APPROVED");
-      window.Toast?.success?.("Duyệt nhà hàng thành công");
-      return;
-    }
-  } catch (err) {
-    console.error(err);
-    window.Toast?.error?.("Không thể thực hiện. Vui lòng thử lại.");
-  } finally {
-    setLoading(btn, false);
-  }
-}, true);
+  }, true);
 })();
