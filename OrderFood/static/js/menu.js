@@ -26,11 +26,8 @@ async function addDish() {
                 return;
             }
         }
-
-        // Thêm link image vào formData
         formData.append('image_url', imageUrl);
 
-        // Gửi dữ liệu tới server
         try {
             const res = await fetch('/owner/add_dish', {
                 method: 'POST',
@@ -44,10 +41,9 @@ async function addDish() {
                     collapse.hide();
                 }
 
-                // 2. Reset form
+                // reset form
                 addDishForm.reset();
 
-                // 3. Hiển thị món mới vào table
                 const dish = data.dish;
                 if (dishesTableBody) {
                     const newRow = document.createElement('tr');
@@ -71,7 +67,6 @@ async function addDish() {
                     `;
                     dishesTableBody.appendChild(newRow);
 
-                    // thêm sự kiện click để edit
                     newRow.addEventListener('click', () => {
                         const id = newRow.dataset.id;
                         const name = newRow.dataset.name;
@@ -94,7 +89,6 @@ async function addDish() {
                 }
 
 
-                // 4. Hiển thị category mới
                 if (dish.category) {
                     const exists = Array.from(categorySelect.options)
                                         .some(opt => opt.value === dish.category);
@@ -102,13 +96,12 @@ async function addDish() {
                         const newOpt = document.createElement('option');
                         newOpt.value = dish.category;
                         newOpt.textContent = dish.category;
-                        // Thêm trước option "Thêm mới" (giữ option "new" ở cuối)
                         const newOption = categorySelect.querySelector('option[value="new"]');
                         categorySelect.insertBefore(newOpt, newOption);
                     }
                 }
 
-                //5. Ẩn input thêm cate
+                // Ẩn input thêm cate
 
                 newCategoryInput.classList.add('d-none');
                 newCategoryInput.required = false;
