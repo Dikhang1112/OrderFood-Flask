@@ -42,12 +42,18 @@
                 <td class="rs-col">{{ o.restaurant.name if o.restaurant else "—" }}</td>
                 <td class="rs-col">{{ "{:,.0f}".format(o.total_price) }} đ</td>
                 <td class="rs-col">
-            <span class="rs-badge rs-badge--{{ 'ok' if o.status.value=='APPROVED'
-                                              else 'warn' if o.status.value=='PENDING'
-                                              else 'err' }}">
-              {{ o.status.value }}
-            </span>
+  <span class="rs-badge rs-badge--{{
+      'ok' if o.status.value=='APPROVED'
+      else 'warn' if o.status.value=='PENDING'
+      else 'accepted' if o.status.value=='ACCEPTED'
+      else 'cancel' if o.status.value=='CANCEL'
+      else 'complete' if o.status.value=='COMPLETED'
+      else 'err'
+  }}">
+    {{ o.status.value }}
+  </span>
                 </td>
+
                 <td class="rs-col">{{ o.waiting_time }} phút</td>
                 <td class="rs-col">{{ o.created_date.strftime("%d/%m/%Y %H:%M") }}</td>
                 <td class="rs-col">
