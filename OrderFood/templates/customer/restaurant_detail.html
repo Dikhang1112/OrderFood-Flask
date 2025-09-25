@@ -5,7 +5,6 @@
 
 {% block content %}
 <div class="container mt-4">
-    <p>{{res.restaurant_id}}</p>
     {% if res %}
     <!-- Thông tin nhà hàng -->
     <div class="row mb-4">
@@ -39,6 +38,16 @@
             </div>
             <p><strong>Thời gian mở cửa:</strong> {{ res.open_hour }} - {{ res.close_hour }}</p>
         </div>
+
+        <p>
+            <strong>Trạng thái:</strong>
+            {% if is_open %}
+            <span class="text-success">Mở cửa</span>
+            {% else %}
+            <span class="text-danger">Đang đóng</span>
+            {% endif %}
+        </p>
+
     </div>
     <hr>
     <!-- Thực đơn -->
@@ -87,9 +96,15 @@
                                             <span class="fw-bold text-danger mt-auto">{{ dish.price }} đ</span>
                                         </div>
                                         <div class="col-2 d-flex align-items-center justify-content-end">
-                                            <a href="javascript:;"
-                                               class="btn btn-success btn-sm"
-                                            onclick="addToCart({{dish.dish_id}}, {{res.restaurant_id}})"> + </a>
+                                            <a href="#" class="btn btn-success btn-sm add-dish-btn"
+                                               data-id="{{ dish.dish_id }}"
+                                               data-name="{{ dish.name|e }}"
+                                               data-image="{{ dish.image|default('https://via.placeholder.com/120x120?text=No+Image')|e }}"
+                                               data-price="{{ dish.price }}"
+                                               data-note="{{ dish.note|default('')|e }}"
+                                               data-res="{{ res.restaurant_id }}">
+                                                +
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -111,20 +126,63 @@
     {% else %}
     <p class="text-center">Không có nhà hàng thỏa yêu cầu</p>
     {% endif %}
-    <p>{{cart_items_count}}</p>
 </div>
 
-    <a href="/cart/{{ res.restaurant_id }}" id="mini_cart"
-       class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow  {% if cart_items_count <= 0 %}d-none{% endif %}"
-       style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;">
-        <i class="fas fa-shopping-cart fa-lg text-white"></i>
-        <!-- Badge số lượng -->
-        <span id="cart-count"
-              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger  {% if cart_items_count <= 0 %}d-none{% endif %}">
-            {{cart_items_count}}        </span>
-    </a>
+<a href="{% if is_open %}/cart/{{ res.restaurant_id }}{% else %}#{% endif %}"
+   id="mini_cart"
+   class="position-fixed bottom-0 end-0 m-4 btn btn-primary rounded-circle shadow {% if cart_items_count <= 0 or not is_open %}disabled{% endif %}"
+   style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index:1050;"
+   {% if not is_open %}onclick="return false;" {% endif %}>
+    <i class="fas fa-shopping-cart fa-lg text-white"></i>
+    <span id="cart-count"
+          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger  {% if cart_items_count <= 0 %}d-none{% endif %}">
+            {{cart_items_count}}
+    </span>
+</a>
 
+<!-- === Popup form chi tiết món ăn === -->
+<div class="modal fade" id="dishModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dishModalTitle">Chi tiết món ăn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex">
+                <img id="dishModalImage" src="" alt="" class="img-fluid me-3"
+                     style="width:120px; height:120px; object-fit:cover;">
+                <div class="flex-grow-1">
+                    <p><strong>Giá:</strong> <span id="dishModalPrice"></span> đ</p>
+                    <p id="dishModalNote"></p>
+                    <div class="mb-2">
+                        <label>Số lượng:</label>
+                        <input type="number" id="dishModalQty" value="1" min="1" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label>Ghi chú:</label>
+                        <input type="text" id="dishModalUserNote" class="form-control" placeholder="Nhập ghi chú...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" id="dishModalAddBtn"
+                        {% if not is_open %}disabled{% endif %}>
+                    Thêm vào giỏ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <script src="{{ url_for('static', filename='js/customer/cart.js') }}"></script>
+
+<style>
+    .btn.disabled {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+</style>
+
 {% endblock %}

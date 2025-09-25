@@ -64,9 +64,14 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     password = db.Column(db.String(255), nullable=True)
     avatar = db.Column(db.String(255))  # lưu URL từ Cloudinary
-    phone = db.Column(db.String(20))
+    created_date = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+    )
 
     role = db.Column(SAEnum(Role, name="role_enum"), nullable=False, default=Role.CUSTOMER)
+    address = db.Column(db.String(255))
+    phone = db.Column(db.String(10), nullable=True, index=True,unique=True,)
 
     customer = db.relationship("Customer", uselist=False, back_populates="user", cascade="all, delete-orphan")
     restaurant_owner = db.relationship("RestaurantOwner", uselist=False, back_populates="user",
@@ -137,6 +142,8 @@ class Restaurant(db.Model):
     by_admin_id = db.Column(db.Integer, db.ForeignKey("admin.user_id"), nullable=True)
     address = db.Column(db.String(255))
     rating_point = db.Column(db.Float, default=0.0)
+    is_open = db.Column(db.Boolean, default=False, nullable=False)
+
 
     owner = db.relationship("RestaurantOwner", back_populates="restaurant")
     approved_by = db.relationship("Admin", back_populates="restaurants_approved")
@@ -201,6 +208,7 @@ class CartItem(db.Model):
     cart_id = db.Column(db.Integer, db.ForeignKey("cart.cart_id"), nullable=False, index=True)
     dish_id = db.Column(db.Integer, db.ForeignKey("dish.dish_id"), nullable=False, index=True)
     quantity = db.Column(db.Integer, nullable=False, default=1)
+    note = db.Column(db.String(255))
 
     cart = db.relationship("Cart", backref=db.backref("items", cascade="all, delete-orphan"))
     dish = db.relationship("Dish", backref=db.backref("cart_items", cascade="all, delete-orphan"))

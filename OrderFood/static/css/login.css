@@ -29,27 +29,38 @@ p {
 }
 span { font-size: 12px; }
 
-/* Scope riêng cho form đăng nhập/đăng ký */
+/* ================== FORM ================== */
 .auth-container form {
   background-color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 0 50px;
+  padding: 56px 64px 32px; /* top 56 cho không cụt tiêu đề, bottom 32 để hở nút */
   height: 100%;
   text-align: center;
+  width: 92%;
+  max-width: 560px;       /* to hơn */
+  gap: 10px;
 }
 
 .auth-container input,
 .auth-container select {
-  background-color: #eee;
-  border: none;
-  padding: 12px 15px;
+  background-color: #fff;
+  border: 1px solid #ffd6d6; /* viền cam nhạt */
+  padding: 14px 18px;        /* to hơn */
   margin: 8px 0;
   width: 100%;
+  border-radius: 10px;       /* bo nhiều hơn */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 16px;           /* chữ lớn hơn */
 }
-
+.auth-container input:focus,
+.auth-container select:focus {
+  outline: none;
+  border-color: #ff7043; /* cam tươi */
+  box-shadow: 0 0 0 2px rgba(255,112,67,0.2);
+}
 .auth-container a {
   color: #333;
   font-size: 14px;
@@ -58,35 +69,33 @@ span { font-size: 12px; }
 }
 
 .auth-container button {
-  border-radius: 20px;
-  border: 1px solid #FF4B2B;
-  background-color: #FF4B2B;
-  color: #FFFFFF;
-  font-size: 12px;
+  border-radius: 24px;
+  border: 1px solid #ff7043;
+  background-color: #ff7043;
+  color: #fff;
+  font-size: 14px;         /* to hơn */
   font-weight: bold;
-  padding: 12px 45px;
+  padding: 14px 52px;      /* to hơn */
   letter-spacing: 1px;
   text-transform: uppercase;
-  transition: transform 80ms ease-in;
+  transition: all 0.2s ease;
 }
+.auth-container button:hover { background-color: #ff8a65; border-color: #ff8a65; }
 .auth-container button:active { transform: scale(0.95); }
 .auth-container button:focus { outline: none; }
-.auth-container button.ghost {
-  background-color: transparent;
-  border-color: #FFFFFF;
-}
+.auth-container button.ghost { background-color: transparent; border-color: #FFFFFF; }
 
-/* Hộp login */
+/* ================== HỘP LOGIN ================== */
 .auth-container {
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 14px 28px rgba(0,0,0,0.25),
               0 10px 10px rgba(0,0,0,0.22);
   position: relative;
-  overflow: hidden;
-  width: 768px;
+  overflow: visible;        /* quan trọng: không cắt nội dung */
+  width: 1040px;            /* to hơn */
   max-width: 100%;
-  min-height: 480px;
+  min-height: 640px;        /* cao hơn để đủ chỗ cho nút */
 }
 
 .form-container {
@@ -94,6 +103,7 @@ span { font-size: 12px; }
   top: 0;
   height: 100%;
   transition: all 0.6s ease-in-out;
+  overflow-y: auto;         /* quan trọng: form tự cuộn nếu dài */
 }
 
 .sign-in-container {
@@ -101,9 +111,7 @@ span { font-size: 12px; }
   width: 50%;
   z-index: 2;
 }
-.auth-container.right-panel-active .sign-in-container {
-  transform: translateX(100%);
-}
+.auth-container.right-panel-active .sign-in-container { transform: translateX(100%); }
 
 .sign-up-container {
   left: 0;
@@ -123,6 +131,7 @@ span { font-size: 12px; }
   50%, 100%  { opacity: 1; z-index: 5; }
 }
 
+/* ================== OVERLAY ================== */
 .overlay-container {
   position: absolute;
   top: 0;
@@ -133,12 +142,10 @@ span { font-size: 12px; }
   transition: transform 0.6s ease-in-out;
   z-index: 100;
 }
-.auth-container.right-panel-active .overlay-container {
-  transform: translateX(-100%);
-}
+.auth-container.right-panel-active .overlay-container { transform: translateX(-100%); }
 
 .overlay {
-  background: linear-gradient(to right, #FF4B2B, #FF416C);
+  background: linear-gradient(to right, #da7100f5, #ed3b1d);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;
@@ -150,9 +157,7 @@ span { font-size: 12px; }
   transform: translateX(0);
   transition: transform 0.6s ease-in-out;
 }
-.auth-container.right-panel-active .overlay {
-  transform: translateX(50%);
-}
+.auth-container.right-panel-active .overlay { transform: translateX(50%); }
 
 .overlay-panel {
   position: absolute;
@@ -168,9 +173,9 @@ span { font-size: 12px; }
   transform: translateX(0);
   transition: transform 0.6s ease-in-out;
 }
-.overlay-left { transform: translateX(-20%); }
-.auth-container.right-panel-active .overlay-left { transform: translateX(0); }
+.overlay-left  { transform: translateX(-20%); }
 .overlay-right { right: 0; transform: translateX(0); }
+.auth-container.right-panel-active .overlay-left  { transform: translateX(0); }
 .auth-container.right-panel-active .overlay-right { transform: translateX(20%); }
 
 .social-container { margin: 20px 0; }
@@ -185,7 +190,7 @@ span { font-size: 12px; }
   width: 40px;
 }
 
-/* Footer site */
+/* ================== FOOTER (nếu có) ================== */
 footer {
   background-color: #222;
   color: #fff;
@@ -196,3 +201,14 @@ footer {
 footer p { margin: 10px 0; }
 footer i { color: red; }
 footer a { color: #3c97bf; text-decoration: none; }
+
+/* ================== RESPONSIVE ================== */
+@media (max-width: 992px){
+  .auth-container{ width: 95vw; min-height: 580px; }
+  .auth-container form{ padding: 48px 44px 28px; max-width: 520px; }
+  .auth-container input, .auth-container select{ font-size: 15px; padding: 13px 16px; }
+}
+@media (max-width: 576px){
+  .auth-container{ width: 100%; border-radius: 0; min-height: 560px; }
+  .auth-container form{ padding: 40px 24px 24px; }
+}

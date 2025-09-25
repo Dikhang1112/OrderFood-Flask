@@ -1,77 +1,98 @@
 # OrderFood/customer.py
+import re
+
 from flask import Blueprint, render_template, request, session, abort, jsonify, redirect, url_for, flash
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from werkzeug.security import check_password_hash, generate_password_hash
 
-
-from OrderFood import db, dao_index
+from OrderFood import db
+from OrderFood.dao import customer_dao as dao_cus
 from OrderFood.models import (
     Restaurant, Dish, Category,
     Cart, CartItem, Customer,
-    Order, StatusOrder, StatusCart, Notification, OrderRating
+    Order, StatusOrder, StatusCart, Notification, OrderRating, User
 )
 
 customer_bp = Blueprint("customer", __name__)
+
 
 # ============== helpers ==============
 def _role_to_str(r):
     return getattr(r, "value", r)
 
+
 def is_customer(role: str) -> bool:
     rolestr = _role_to_str(role)
     return (rolestr or "").lower() == "customer"
-def update_restaurant_rating(restaurant_id: int):
-    subq = (
-        db.session.query(OrderRating.rating)
-        .join(Order, OrderRating.order_id == Order.order_id)
-        .filter(Order.restaurant_id == restaurant_id,
-                OrderRating.rating >= 1, OrderRating.rating <= 5)
-        .order_by(OrderRating.orating_id.desc())
-        .limit(20)
-        .subquery()
-    )
 
-    avg_rating = db.session.query(func.avg(subq.c.rating)).scalar()
+def is_customer_or_owner(role):
+    return (role or "").lower() in ("customer", "restaurant_owner")
+def get_user_by_phone(phone: str):
+    return User.query.filter_by(phone=phone).first()
 
-    res = Restaurant.query.get(restaurant_id)
-    if res:
-        res.rating_point = float(avg_rating or 0)
-        db.session.commit()
+
+from datetime import datetime
+
+
+def is_restaurant_open(restaurant):
+    if not restaurant.is_open:
+        return False
+    try:
+        open_time = datetime.strptime(restaurant.open_hour, "%H:%M").time()
+        close_time = datetime.strptime(restaurant.close_hour, "%H:%M").time()
+        now = datetime.now().time()
+
+        if open_time <= close_time:
+            # Giờ mở và đóng cùng ngày
+            return open_time <= now <= close_time
+        else:
+            # Giờ đóng thuộc ngày hôm sau (qua nửa đêm)
+            return now >= open_time or now <= close_time
+
+    except Exception as e:
+        # Trường hợp open_hour/close_hour không hợp lệ
+        return False
+
 
 # ============== routes render customer/*.html ==============
 
+from flask import session
+from sqlalchemy import func
+
 @customer_bp.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
-    res = dao_index.get_restaurant_by_id(restaurant_id)
-    if not res:
-        abort(404)
+    res = dao_cus.get_restaurant_by_id(restaurant_id)
+    # if not res:
+    #     abort(404)
 
-    dishes = Dish.query.filter_by(res_id=restaurant_id).all()
-    categories = Category.query.filter_by(res_id=restaurant_id).all()
-    stars = dao_index.get_star_display(res.rating_point or 0)
+    dishes, categories = dao_cus.get_restaurant_menu_and_categories(restaurant_id)
+    stars = dao_cus.get_star_display(res.rating_point or 0)
+
+    # --- NEW: gom món theo category_id ---
+    dishes_by_category = {}
+    for c in categories:
+        cid = getattr(c, "category_id", getattr(c, "id", None))
+        if cid is not None:
+            dishes_by_category[cid] = [d for d in dishes if d.category_id == cid]
 
     cart_items_count = 0
     user_id = session.get("user_id")
+    is_open = is_restaurant_open(res)
     if user_id:
-        from sqlalchemy import or_
-
-        cart = Cart.query.filter(
-            Cart.cus_id == user_id,
-            Cart.res_id == res.restaurant_id,
-            or_(Cart.status == StatusCart.ACTIVE, Cart.status == StatusCart.SAVED)
-        ).first()
-
-        if cart and cart.items:
-            cart_items_count = sum(item.quantity or 0 for item in cart.items)
+        cart = dao_cus.get_active_cart(user_id, res.restaurant_id)
+        cart_items_count = dao_cus.count_cart_items(cart)
 
     return render_template(
         "/customer/restaurant_detail.html",
         res=res,
-        dishes=dishes,
+        dishes=dishes,  # giữ nguyên để không phá chỗ khác
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-    )  # :contentReference[oaicite:4]{index=4}
+        dishes_by_category=dishes_by_category,  # --- NEW
+        is_open=is_open
+    )
+
+
 
 
 @customer_bp.route("/cart/<int:restaurant_id>")
@@ -83,25 +104,82 @@ def cart(restaurant_id):
     customer = Customer.query.filter_by(user_id=user_id).first()
     if not customer:
         return jsonify({"error": "Bạn không phải là khách hàng"}), 403
-    cart = Cart.query.filter_by(cus_id=customer.user_id, res_id=restaurant_id, status=StatusCart.ACTIVE).first()
-    cart_items = []
-    total_price = 0
 
-    if cart:
-        cart_items = cart.items
-        total_price = sum(item.quantity * item.dish.price for item in cart_items)
+    cart = dao_cus.get_active_cart(customer.user_id, restaurant_id)
+    cart_items = cart.items if cart else []
+    total_price = sum(item.quantity * item.dish.price for item in cart_items) if cart_items else 0
+    is_open = is_restaurant_open(Restaurant.query.filter_by(restaurant_id=restaurant_id).first())
+    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price
+                           , is_open=is_open)
 
-    return render_template("/customer/cart.html", cart=cart, cart_items=cart_items, total_price=total_price)
+# ========== CẬP NHẬT ITEM ==========
+@customer_bp.route("/api/cart/<int:item_id>", methods=["PUT"])
+def update_cart_item(item_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
 
+    data = request.json
+    quantity = data.get("quantity", 1)
+    note = data.get("note", "")
+
+    item = CartItem.query.get(item_id)
+    if not item or item.cart.customer.user_id != user_id:
+        return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
+
+    item.quantity = quantity
+    item.note = note
+    db.session.commit()
+
+    subtotal = item.quantity * item.dish.price
+    total = sum(i.quantity * i.dish.price for i in item.cart.items)
+    total_items = sum(i.quantity for i in item.cart.items)
+
+    return jsonify({"success": True, "subtotal": subtotal, "total": total, "total_items": total_items})
+
+# Xóa
+@customer_bp.route("/api/cart/<int:item_id>", methods=["DELETE"])
+def delete_cart_item(item_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Bạn chưa đăng nhập"}), 403
+
+    # Lấy item
+    item = CartItem.query.get(item_id)
+    if not item or not item.cart or not item.cart.customer or item.cart.customer.user_id != user_id:
+        return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
+
+    # Lấy restaurant_id trước khi xóa
+    restaurant_id = item.cart.restaurant.restaurant_id if item.cart.restaurant else None
+
+    # Xóa item
+    db.session.delete(item)
+    db.session.commit()
+
+    # Count các CartItem còn lại của user trong restaurant này
+    remaining_items = CartItem.query.join(Cart).filter(
+        Cart.cus_id == user_id,
+        Cart.res_id == restaurant_id,
+        Cart.status == StatusCart.ACTIVE or Cart.status == StatusCart.SAVED
+    ).count()
+    print("remaining_items:", remaining_items)
+    print("restaurant_id:", restaurant_id)
+
+    response = {"success": True, "total_items": remaining_items}
+
+    # Nếu giỏ hàng trống -> trả redirect_url
+    if remaining_items == 0 and restaurant_id:
+        response["redirect_url"] = url_for(
+            "customer.restaurant_detail", restaurant_id=restaurant_id
+        )
+
+    return jsonify(response)
 
 @customer_bp.route("/orders")
 def my_orders():
     uid = session.get("user_id")
     if not uid:
-        # để đúng yêu cầu, không redirect ra template ngoài /customer/*
-        # view list orders chỉ khả dụng khi đã đăng nhập
         abort(403)
-
     if not is_customer(session.get("role")):
         abort(403)
 
@@ -109,14 +187,7 @@ def my_orders():
     per_page = request.args.get("per_page", 10, type=int)
     status_filter = (request.args.get("status") or "").strip().upper()
 
-    q = Order.query.filter_by(customer_id=uid).order_by(Order.created_date.desc())
-    if status_filter in ("PENDING", "PAID", "ACCEPT", "ACCEPTED", "CANCELED", "COMPLETED"):
-        if status_filter == "ACCEPT":
-            status_filter = "ACCEPTED"
-        q = q.filter(Order.status == getattr(StatusOrder, status_filter))
-
-    total = q.count()
-    orders = q.offset((page - 1) * per_page).limit(per_page).all()
+    orders, total = dao_cus.list_customer_orders(uid, status_filter, page, per_page)
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
@@ -126,25 +197,18 @@ def my_orders():
     )
 
 
-
-
-
 @customer_bp.route("/customer")
 def customer_home():
     if not is_customer(session.get("role")):
         return redirect(url_for("login"))
 
-    restaurants = Restaurant.query.limit(50).all()
-    restaurants.sort(key=lambda r: r.rating_point or 0, reverse=True)
-
-    restaurants_with_stars = []
-    for r in restaurants:
-        restaurants_with_stars.append({
-            "restaurant": r,
-            "stars": dao_index.get_star_display(r.rating_point or 0)
-        })
-
+    restaurants = dao_cus.list_top_restaurants(limit=50)
+    restaurants_with_stars = [
+        {"restaurant": r, "stars": dao_cus.get_star_display(r.rating_point or 0)}
+        for r in restaurants
+    ]
     return render_template("customer_home.html", restaurants=restaurants_with_stars)
+
 
 @customer_bp.route("/notifications/json")
 def notifications_json():
@@ -152,13 +216,7 @@ def notifications_json():
     if not uid or not is_customer(session.get("role")):
         return jsonify({"items": [], "unread_count": 0}), 200
 
-    # Lấy noti của chính customer qua JOIN với order
-    items = (db.session.query(Notification)
-             .join(Order, Notification.order_id == Order.order_id)
-             .filter(Order.customer_id == uid)
-             .order_by(Notification.create_at.desc())
-             .limit(30)
-             .all())
+    items, unread = dao_cus.list_customer_notifications(uid, limit=30)
 
     def to_dict(n):
         return {
@@ -169,7 +227,6 @@ def notifications_json():
             "is_read": bool(n.is_read),
         }
 
-    unread = sum(0 if n.is_read else 1 for n in items)
     return jsonify({"items": [to_dict(n) for n in items], "unread_count": unread}), 200
 
 
@@ -179,14 +236,8 @@ def notifications_open(noti_id):
     if not uid or not is_customer(session.get("role")):
         abort(403)
 
-    n = Notification.query.get_or_404(noti_id)
-    # Xác thực chủ đơn qua quan hệ n.order (đã có relationship)
-    if not n.order or n.order.customer_id != uid:
-        abort(403)
-
-    n.is_read = True
-    db.session.commit()
-    return redirect(url_for("customer.order_track", order_id=n.order_id))
+    order_id = dao_cus.open_notification(noti_id, uid)
+    return redirect(url_for("customer.order_track", order_id=order_id))
 
 
 @customer_bp.route("/notifications/mark-all-read", methods=["POST"])
@@ -195,29 +246,20 @@ def notifications_mark_all_read():
     if not uid or not is_customer(session.get("role")):
         abort(403)
 
-    # Đánh dấu tất cả noti của uid là đã đọc (JOIN để lọc theo chủ đơn)
-    (db.session.query(Notification)
-       .join(Order, Notification.order_id == Order.order_id)
-       .filter(Order.customer_id == uid, Notification.is_read == False)
-       .update({"is_read": True}, synchronize_session=False))
-    db.session.commit()
+    dao_cus.mark_all_notifications_read(uid)
     return jsonify({"ok": True})
 
 
 @customer_bp.route("/order/<int:order_id>/rate", methods=["POST"])
 def order_rate(order_id):
     uid = session.get("user_id") or abort(403)
-    order = Order.query.get_or_404(order_id)
-    if order.customer_id != uid:
-        abort(403)
+    order = dao_cus.get_order_for_customer_or_admin(order_id, uid, (session.get("role") or "").upper())
 
-    # Chỉ cho đánh giá khi hoàn tất
-    if (getattr(order.status, "value", order.status) or "").upper() != "COMPLETED":
+    if not dao_cus.can_rate_order(order, uid):
         flash("Chỉ có thể đánh giá khi đơn đã giao thành công.", "warning")
         return redirect(url_for("customer.order_track", order_id=order_id))
 
-    # Chặn đánh giá lại
-    if OrderRating.query.filter_by(order_id=order_id, customer_id=uid).first():
+    if dao_cus.has_rated(order_id, uid):
         flash("Bạn đã đánh giá đơn hàng này rồi.", "warning")
         return redirect(url_for("customer.order_track", order_id=order_id))
 
@@ -227,40 +269,21 @@ def order_rate(order_id):
         flash("Điểm đánh giá không hợp lệ.", "danger")
         return redirect(url_for("customer.order_track", order_id=order_id))
 
-    db.session.add(OrderRating(order_id=order_id, customer_id=uid, rating=rating, comment=comment))
-    db.session.commit()
-    update_restaurant_rating(order.restaurant_id)
+    dao_cus.add_order_rating(order_id, uid, rating, comment)
+    dao_cus.update_restaurant_rating(order.restaurant_id)
     flash("Cảm ơn bạn đã đánh giá!", "success")
     return redirect(url_for("customer.order_track", order_id=order_id))
 
+
 @customer_bp.route("/order/<int:order_id>/track")
 def order_track(order_id):
-    uid = session.get("user_id")
-    if not uid:
-        abort(403)
+    uid = session.get("user_id") or abort(403)
+    role_upper = (session.get("role") or "").upper()
+    order = dao_cus.get_order_for_customer_or_admin(order_id, uid, role_upper)
 
-    order = Order.query.get_or_404(order_id)
-    if order.customer_id != uid and (session.get("role") or "").upper() != "ADMIN":
-        abort(403)
+    status_str = (getattr(order.status, "value", order.status) or "").upper()
+    active_idx, last_label, is_completed = dao_cus.compute_track_state(status_str)
 
-    s = (getattr(order.status, "value", order.status) or "").upper()
-    is_paid      = (s == "PAID")
-    is_accepted  = (s in ("ACCEPTED", "ACCEPT"))
-    is_canceled  = (s == "CANCELED")
-    is_completed = (s == "COMPLETED")
-
-    if is_paid:
-        active_idx = 0
-    elif is_accepted:
-        active_idx = 1
-    elif is_canceled or is_completed:
-        active_idx = 2
-    else:
-        active_idx = -1
-
-    last_label = "Đã hủy" if is_canceled else "Đã giao hàng thành công"
-
-    # === thông tin đánh giá ===
     rated = OrderRating.query.filter_by(order_id=order_id, customer_id=uid).first()
     has_rated = bool(rated)
     user_rating = rated.rating if rated else None
@@ -271,9 +294,88 @@ def order_track(order_id):
         order=order,
         active_idx=active_idx,
         last_label=last_label,
-        status_str=s,
+        status_str=status_str,
         is_completed=is_completed,
         has_rated=has_rated,
         user_rating=user_rating,
         user_comment=user_comment,
     )
+
+
+@customer_bp.route("/profile", methods=["GET"])
+def profile_page():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    return render_template("customer/profile.html", user=user, role=role)
+
+
+# === Cập nhật tên / địa chỉ ===
+PHONE_RE = re.compile(r'^0\d{9}$')
+@customer_bp.route("/profile", methods=["POST"])
+def profile_update():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    name    = (request.form.get("name") or "").strip()
+    address = (request.form.get("address") or "").strip()
+    phone   = (request.form.get("phone") or "").strip()
+
+    if not name:
+        flash("Tên không được để trống.", "danger")
+        return redirect(url_for("customer.profile"))
+
+    if phone and not PHONE_RE.match(phone):
+        flash("Số điện thoại không hợp lệ. Yêu cầu 10 số và bắt đầu bằng 0.", "warning")
+        return redirect(url_for("customer.profile"))
+
+    if phone:
+        exists = User.query.filter(User.phone == phone, User.user_id != uid).first()
+        if exists:
+            flash("Số điện thoại này đã đăng ký", "warning")
+            return redirect(url_for("customer.profile"))
+
+    user.name = name
+    user.address = address
+    user.phone = phone or None
+    db.session.commit()
+    flash("Cập nhật hồ sơ thành công.", "success")
+    return redirect(url_for("customer.profile"))
+
+
+# === Đổi mật khẩu ===
+@customer_bp.route("/profile/password", methods=["POST"])
+def profile_change_password():
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or not is_customer_or_owner(role):
+        return redirect(url_for("login"))
+
+    user = User.query.get(uid)
+    old_pw = request.form.get("old_password") or ""
+    new_pw = request.form.get("new_password") or ""
+    confirm = request.form.get("confirm_password") or ""
+
+    if user.password:
+        if not check_password_hash(user.password, old_pw):
+            flash("Mật khẩu hiện tại không đúng.", "danger")
+            return redirect(url_for("customer.profile_page"))
+    # nếu account OAuth chưa có password, cho phép đặt mới không cần old_pw
+
+    if len(new_pw) < 6:
+        flash("Mật khẩu mới tối thiểu 6 ký tự.", "warning")
+        return redirect(url_for("customer.profile_page"))
+    if new_pw != confirm:
+        flash("Xác nhận mật khẩu không khớp.", "warning")
+        return redirect(url_for("customer.profile"))
+
+    user.password = generate_password_hash(new_pw)
+    db.session.commit()
+    flash("Đổi mật khẩu thành công.", "success")
+    return redirect(url_for("customer.profile"))

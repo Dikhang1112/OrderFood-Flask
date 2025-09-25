@@ -1,50 +1,74 @@
 {% extends "layout/base.html" %}
-{% block title %}Chi tiết nhà hàng{% endblock %}
+{% block title %}Giỏ hàng{% endblock %}
 
 {% block content %}
-<h1>Giỏ Hàng</h1>
-{% if cart_items %}
-<table class="table">
-    <thead>
-    <tr>
-        <th>#</th>
-        <th>Món</th>
-        <th>Giá</th>
-        <th>Số lượng</th>
-        <th>Tổng</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for item in cart_items %}
-    <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ item.dish.name }}</td>
-        <td>{{ "{:,.0f}".format(item.dish.price) }} đ</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ "{:,.0f}".format(item.quantity * item.dish.price) }} đ</td>
-    </tr>
-    {% endfor %}
-    <tr>
-        <td colspan="4" style="text-align:right;"><strong>Tổng cộng:</strong></td>
-        <td><strong>{{ "{:,.0f}".format(total_price) }} đ</strong></td>
-        {% if cart and cart.items|length > 0 %}
-        {% set rid = cart.res_id if cart and cart.res_id else (cart.restaurant.restaurant_id if cart and cart.restaurant
-        else None) %}
-        <div class="text-end mt-3">
-            <a class="btn btn-primary"
-               href="{{ url_for('vnpay.checkout_vnpay', restaurant_id=rid) }}">
-                <img src="{{ url_for('static', filename='img/vnpay.jpg') }}"
-                     alt="VNPay" style="height:20px;margin-right:6px;vertical-align:middle;" loading="lazy">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client/cart.css') }}"/>
 
-                Thanh toán VNPay
-            </a>
-        </div>
-        {% endif %}
+<div class="container ct-cart">
+  <h1 class="ct-title">Giỏ Hàng</h1>
 
-    </tr>
-    </tbody>
-</table>
-{% else %}
-<p>Giỏ hàng của bạn đang trống.</p>
-{% endif %}
+  {% if cart_items %}
+  <div class="ct-table-wrap">
+    <table class="ct-table">
+      <thead>
+        <tr>
+          <th>Stt</th>
+          <th>Món</th>
+          <th>Giá</th>
+          <th>Số lượng</th>
+          <th>Ghi chú</th>
+          <th>Tổng</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart_items %}
+        <tr data-id="{{ item.cart_item_id }}">
+          <td>{{ loop.index }}</td>
+          <td>{{ item.dish.name }}</td>
+          <td>{{ "{:,.0f}".format(item.dish.price) }} đ</td>
+          <td>
+            <input type="number" min="1" value="{{ item.quantity }}"
+                   class="cart-qty-input form-control"
+                   data-id="{{ item.cart_item_id }}">
+          </td>
+          <td>
+            <input type="text" value="{{ item.note or '' }}"
+                   class="cart-note-input form-control"
+                   data-id="{{ item.cart_item_id }}">
+          </td>
+          <td class="cart-subtotal">{{ "{:,.0f}".format(item.quantity * item.dish.price) }} đ</td>
+          <td>
+            <button class="btn btn-sm btn-danger delete-cart-item"
+                    data-id="{{ item.cart_item_id }}">Xóa</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5" class="text-end fw-bold">Tổng cộng:</td>
+          <td colspan="2" id="cart-total">{{ "{:,.0f}".format(total_price) }} đ</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {% if cart and cart.items|length > 0 %}
+    {% set rid = cart.res_id if cart and cart.res_id else (cart.restaurant.restaurant_id if cart and cart.restaurant else None) %}
+    <div class="ct-actions">
+      <a class="ct-btn-pay" href="{{ url_for('vnpay.checkout_vnpay', restaurant_id=rid) }}">
+        <img src="{{ url_for('static', filename='img/vnpay.jpg') }}" alt="VNPay" class="ct-pay-logo" loading="lazy">
+        Thanh toán VNPay
+      </a>
+    </div>
+  {% endif %}
+
+  {% else %}
+    <p class="text-muted">Giỏ hàng của bạn đang trống.</p>
+  {% endif %}
+</div>
+
+<script src="{{ url_for('static', filename='js/customer/cart.js') }}"></script>
+
 {% endblock %}

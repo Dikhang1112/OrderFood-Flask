@@ -1,0 +1,106 @@
+/* ===== Restaurant Detail Page (prefix: rd-) ===== */
+
+/* Khối thông tin nhà hàng */
+.rd-header {
+  margin-bottom: 1.5rem;
+}
+.rd-header h3.rd-name {
+  font-weight: 700;
+  color: #333;
+}
+.rd-header p {
+  margin-bottom: .25rem;
+  color: #555;
+}
+.rd-stars i {
+  margin-right: 2px;
+}
+
+/* Menu layout */
+.rd-menu {
+  background: #f9f9f9;
+}
+.rd-sidebar {
+  border-right: 1px solid #eee;
+}
+.rd-sidebar-item {
+  border: none;
+  padding: .6rem .75rem;
+  font-weight: 600;
+  color: #444;
+  transition: background .2s ease, color .2s ease;
+}
+.rd-sidebar-item:hover,
+.rd-sidebar-item:focus {
+  background: #fff5f5;
+  color: #ff7043;
+}
+.rd-sidebar-link {
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+
+/* Category section */
+.rd-category-title {
+  font-weight: 700;
+  color: #ff7043;
+  margin: 1rem 0 .75rem;
+  padding-bottom: .25rem;
+  border-bottom: 2px solid #ffe0d6;
+}
+
+/* Dish card */
+.rd-dish-card {
+  border: 1px solid #f1f1f1;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.rd-dish-card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  transform: translateY(-2px);
+}
+.rd-dish-img img {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.rd-dish-info .card-body {
+  display: flex;
+  flex-direction: column;
+}
+.rd-dish-name {
+  font-weight: 600;
+  color: #222;
+}
+.rd-dish-note {
+  font-size: 0.9rem;
+  color: #666;
+}
+.rd-dish-price {
+  font-weight: 700;
+  color: #e53935;
+  font-size: 1rem;
+}
+
+/* Add-to-cart button */
+.rd-add-btn {
+  background: #ff7043 !important;
+  border: none !important;
+  color: #fff !important;
+}
+.rd-add-btn:hover {
+  background: #ff8a65 !important;
+}
+
+/* Mini cart */
+#mini_cart {
+  background: #ff7043 !important;
+  border: none;
+}
+#mini_cart:hover {
+  background: #ff8a65 !important;
+}
+#cart-count {
+  font-size: .75rem;
+}

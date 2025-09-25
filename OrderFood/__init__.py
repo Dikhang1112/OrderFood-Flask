@@ -1,17 +1,16 @@
 import os
 from urllib.parse import quote
 
+import cloudinary
+from apscheduler.schedulers.background import BackgroundScheduler
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
-from authlib.integrations.flask_client import OAuth
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
-import cloudinary
 
 from OrderFood.helper.NotiHelper import init_app as init_noti
-from apscheduler.schedulers.background import BackgroundScheduler
-
 
 # ================== Load .env ==================
 load_dotenv()
@@ -24,7 +23,7 @@ scheduler = BackgroundScheduler(timezone="Asia/Ho_Chi_Minh", daemon=True)
 _SCHEDULER_STARTED = False  # chống start 2 lần
 
 # ================== ENV & defaults ==================
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-please-change-me")
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
 SQLALCHEMY_DATABASE_URI = os.getenv(
     "SQLALCHEMY_DATABASE_URI",
@@ -52,9 +51,10 @@ SEED_DB = os.getenv("SEED_DB", "false").lower() == "false"
 SEED_CLEAR = os.getenv("SEED_CLEAR", "false").lower() == "true"
 PRESERVE_TRANSACTIONS = os.getenv("PRESERVE_TRANSACTIONS", "true").lower() == "true"  # giữ Order/Payment/Cart
 
+
 def create_app():
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-please-change-me")
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
     app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
     from OrderFood.vnpay import vnpay_bp
@@ -62,11 +62,17 @@ def create_app():
     from OrderFood import admin_service
     from OrderFood.customer_service import customer_bp
     from OrderFood.notifications import noti_bp
+    from OrderFood.chart_owner import bp_stats
+    from OrderFood.owner import owner_bp
+
     app.register_blueprint(noti_bp)
     app.register_blueprint(vnpay_bp)
     app.register_blueprint(google_auth_bp)
     app.register_blueprint(admin_service.admin_bp)
     app.register_blueprint(customer_bp)
+    app.register_blueprint(owner_bp)
+
+    app.register_blueprint(bp_stats)
 
     # Cloudinary (theo .env)
     cloudinary.config(
@@ -75,12 +81,21 @@ def create_app():
         api_secret=CLOUDINARY_API_SECRET,
     )
 
+    app.config.update(
+        MAIL_SERVER=MAIL_SERVER,
+        MAIL_PORT=MAIL_PORT,
+        MAIL_USE_TLS=MAIL_USE_TLS,
+        MAIL_USE_SSL=MAIL_USE_SSL,
+        MAIL_USERNAME=MAIL_USERNAME,
+        MAIL_PASSWORD=MAIL_PASSWORD,
+        # Gợi ý: để sender trùng tài khoản gửi cho khỏi bị chặn
+        MAIL_DEFAULT_SENDER=os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME,
+    )
     # Init extensions
     db.init_app(app)
     mail.init_app(app)
 
     # Admin blueprint + notifications
-
 
     init_noti(app)
 
@@ -112,26 +127,28 @@ def create_app():
         if SEED_CLEAR:
             if not PRESERVE_TRANSACTIONS:
                 # Xoá theo thứ tự phụ thuộc để không vi phạm FK
+
                 try:
+                    # --- Bảng con / liên kết ---
+                    db.session.query(models.Notification).delete()
+                    db.session.query(models.OrderRating).delete()
+                    db.session.query(models.Refund).delete()
                     db.session.query(models.Payment).delete()
-                except Exception:
-                    pass
-                # Nếu có bảng OrderItem/OrderDetail thì xoá TRƯỚC Order
-                # try: db.session.query(models.OrderItem).delete()
-                # except Exception: pass
+                    db.session.query(models.Order).delete()
+                    db.session.query(models.CartItem).delete()
+                    db.session.query(models.Cart).delete()
+                    db.session.query(models.Dish).delete()
+                    db.session.query(models.Category).delete()
+                    db.session.query(models.Restaurant).delete()
+                    db.session.query(models.Customer).delete()
+                    db.session.query(models.RestaurantOwner).delete()
+                    db.session.query(models.Admin).delete()
+                    db.session.query(models.User).delete()
 
-                db.session.query(models.Order).delete()
-                db.session.query(models.CartItem).delete()
-                db.session.query(models.Cart).delete()
-
-                db.session.query(models.Dish).delete()
-                db.session.query(models.Category).delete()
-                db.session.query(models.Restaurant).delete()
-                db.session.query(models.RestaurantOwner).delete()
-                db.session.query(models.Admin).delete()
-                db.session.query(models.Customer).delete()
-                db.session.query(models.User).delete()
-                db.session.commit()
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    print("Error resetting database:", e)
             else:
                 # Giữ nguyên dữ liệu giao dịch & user/customer/restaurant để không mất lịch sử
                 pass
@@ -203,11 +220,12 @@ def create_app():
                         restaurant_id=next_restaurant_id,
                         name=res_name,
                         res_owner_id=ro.user_id,
-                        status="PENDING",
+                        status="APPROVED",
                         image="https://res.cloudinary.com/dlwjqml4p/image/upload/v1756870362/res1_inrqfg.jpg",
                         by_admin_id=a1.user_id,
                         address=random.choice(["Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Da Lat", "Vinh Long"]),
                         rating_point=round(random.uniform(1.0, 5.0), 1),
+
                     )
                     restaurants_to_add.append(res)
 
@@ -250,6 +268,79 @@ def create_app():
                 db.session.add_all(categories_to_add)
                 db.session.add_all(dishes_to_add)
                 db.session.commit()
+
+                from datetime import datetime, timedelta
+                from zoneinfo import ZoneInfo
+
+                # ========== FAKE ORDERS + PAYMENTS CHO RESTAURANT_ID = 1 ==========
+                carts_to_add = []
+                cart_items_to_add = []
+                orders_to_add = []
+                payments_to_add = []
+
+                today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+
+                # Lấy danh sách món ăn của restaurant_id = 1
+                dishes_res1 = models.Dish.query.filter_by(res_id=1).all()
+                customers = [c1, c2, c3]
+
+                next_cart_id = 1
+                next_order_id = 1
+                next_payment_id = 1
+
+                for i in range(10):  # 10 orders
+                    customer = random.choice(customers)
+                    dish = random.choice(dishes_res1)
+                    qty = random.randint(1, 3)
+
+                    # Cart
+                    cart = models.Cart(
+                        cus_id=customer.user_id,
+                        res_id=1,
+                        status="CHECKOUT"
+                    )
+                    db.session.add(cart)
+                    db.session.flush()  # lấy cart_id
+                    carts_to_add.append(cart)
+
+                    cart_item = models.CartItem(
+                        cart_id=cart.cart_id,
+                        dish_id=dish.dish_id,
+                        quantity=qty
+                    )
+                    cart_items_to_add.append(cart_item)
+
+                    # Order
+                    order_date = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")) - timedelta(days=random.randint(0, 15))
+                    total_price = dish.price * qty
+
+                    order = models.Order(
+                        customer_id=customer.user_id,
+                        restaurant_id=1,
+                        cart_id=cart.cart_id,
+                        status="COMPLETED",
+                        total_price=total_price,
+                        created_date=order_date
+                    )
+                    db.session.add(order)
+                    db.session.flush()
+                    orders_to_add.append(order)
+
+                    # Payment (amount = total_price * 100 theo VNPay chuẩn)
+                    payment = models.Payment(
+                        order_id=order.order_id,
+                        txn_ref=f"TXN{i + 1:04d}",
+                        amount=int(total_price * 100),
+                        status="PAID",
+                        created_at=order_date
+                    )
+                    payments_to_add.append(payment)
+
+                # Lưu tất cả
+                db.session.add_all(cart_items_to_add)
+                db.session.add_all(payments_to_add)
+                db.session.commit()
+
             # nếu đã có dữ liệu: bỏ qua seeding để bảo toàn giao dịch
         # ---- START SCHEDULER (1 lần, có app context) ----
         global _SCHEDULER_STARTED, scheduler
@@ -277,5 +368,6 @@ def create_app():
         # ---- END SCHEDULER ----
 
     return app
+
 
 app = create_app()

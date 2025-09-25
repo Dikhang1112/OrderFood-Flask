@@ -11,21 +11,34 @@
             <form action="{{ url_for('register') }}" method="POST">
                 <h1>Create Account</h1>
                 <div class="social-container">
-                    <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
-                     <a href="{{ url_for('google_auth.login_google') }}" class="social" title="Sign in with Google">
+                    <a href="{{ url_for('google_auth.login_google') }}" class="social" title="Sign in with Google">
                         <i class="fa-brands fa-google"></i>
                     </a>
-                   <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
                 </div>
-                <span>or use your email for registration</span>
+                <span>Use your email for registration</span>
+                <input type="text" name="name" placeholder="Name"
+                       value="{{ form_data.name if form_data else '' }}" required>
 
-                <input type="text" name="name" placeholder="Name" required/>
-                <input type="email" name="email" placeholder="Email" required/>
-                <input type="password" name="password" placeholder="Password" required/>
+                <input type="email" name="email" placeholder="Email"
+                       value="{{ form_data.email if form_data else '' }}" required>
+
+                <input type="text" name="phone" placeholder="Phone"
+                       value="{{ form_data.phone if form_data else '' }}"
+                       inputmode="numeric" pattern="^0\d{9}$" maxlength="10" required>
+
+                <input type="password" name="password" placeholder="Password" required minlength="6">
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required minlength="6">
+
                 <select name="role" required>
-                    <option value="" disabled selected>Select role</option>
-                    <option value="CUSTOMER">Customer</option>
-                    <option value="RESTAURANT_OWNER">Restaurant Owner</option>
+                    <option value="" disabled {% if not form_data or not form_data.role %}selected{% endif %}>Select
+                        role
+                    </option>
+                    <option value="CUSTOMER" {% if form_data and form_data.role=='CUSTOMER' %}selected{% endif %}>
+                        Customer
+                    </option>
+                    <option value="RESTAURANT_OWNER" {% if form_data and form_data.role=='RESTAURANT_OWNER' %}selected{%
+                            endif %}>Restaurant Owner
+                    </option>
                 </select>
 
                 <button type="submit">Sign Up</button>
@@ -42,7 +55,7 @@
                     </a>
 
                 </div>
-                <span>or use your account</span>
+                <span>Sign In With Google</span>
 
                 <input type="email" name="email" placeholder="Email" required/>
                 <input type="password" name="password" placeholder="Password" required/>
@@ -70,4 +83,11 @@
 </section>
 
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+<script>
+    (function(){
+      const panel = "{{ panel or '' }}";
+      const container = document.getElementById('container');
+      if (panel === 'signup') container?.classList.add('right-panel-active');
+    })();
+</script>
 {% endblock %}

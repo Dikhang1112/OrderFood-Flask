@@ -83,6 +83,17 @@ def push_both_noti(order: Order, message: str) -> None:
     _add_noti(order.order_id, message,
               customer_id=order.customer_id, owner_id=owner_uid)
 
+def push_customer_noti_on_owner_cancel(order: Order, reason: str) -> None:
+    """Khi chủ nhà hàng hủy đơn -> noti cho CUSTOMER kèm lý do."""
+    if not order or not order.customer_id:
+        return
+    reason = (reason or "").strip()
+    if reason:
+        msg = f'Đơn hàng #{order.order_id} của bạn bị hủy bởi phía nhà hàng với lý do "{reason}".'
+    else:
+        msg = f"Đơn hàng #{order.order_id} của bạn bị hủy bởi phía nhà hàng."
+    _add_noti(order.order_id, msg, customer_id=order.customer_id, owner_id=None)
+
 
 # ========= Blueprint API =========
 
@@ -111,7 +122,7 @@ def notifications_feed():
     for n in items:
         if role == "restaurant_owner":
             # sửa: dùng đúng endpoint của owner
-            target_url = url_for("manage_orders")
+            target_url = url_for("owner.manage_orders")
         else:
             target_url = url_for("customer.order_track", order_id=n.order_id)
 

@@ -1,0 +1,175 @@
+{% include "/admin/sidebar.html" %}
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/listRestaurant.css') }}"/>
+    <style>
+        /* Hàng có thể click */
+        .rs-row { position: relative; cursor: pointer; }
+        .rs-row:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+
+        /* Anchor phủ toàn bộ hàng để điều hướng */
+        .row-link { position: absolute; inset: 0; z-index: 1; display: block; border-radius: 12px; }
+
+        /* Đảm bảo nút action nằm trên anchor và vẫn bấm được */
+        .rs-col--action, .rs-action { position: relative; z-index: 2; }
+
+        /* Tabs container ngang nhau */
+        .user-tabs { display: flex; margin-bottom: 20px; }
+        .user-tabs button {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .user-tabs button.active { background-color: #e9ecef; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        #globalSearch {
+        width: 100%;
+        font-size: 18px;
+        padding: 8px 12px;
+        border-radius: 20px;
+        border: 1px solid #ced4da;
+        margin-bottom: 20px;
+    }
+    </style>
+</head>
+
+<main class="page">
+    <div class="container-fluid mt-4">
+        <h2 class="mb-4">Quản lý người dùng</h2>
+
+        <!-- Tabs -->
+        <div class="user-tabs">
+            <button class="tab-btn active" data-target="customers">Khách hàng</button>
+            <button class="tab-btn" data-target="owners">Restaurant Owner</button>
+        </div>
+
+        <input type="text" id="globalSearch" class="form-control mb-3" placeholder="Tìm kiếm...">
+
+        <!-- Tab content -->
+        <div class="tab-content active" id="customers">
+            <table class="rs-table table table-hover align-middle">
+                <thead class="rs-thead">
+                    <tr class="rs-row-head">
+                        <th class="rs-col-id">ID</th>
+                        <th class="rs-col-name">Họ và Tên</th>
+                        <th class="rs-col-addr">Địa chỉ</th>
+                        <th class="rs-col-status">SĐT</th>
+                        <th class="rs-col-rating">Ngày tạo</th>
+                        <th class="rs-col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="rs-body">
+                    {% for c in customers %}
+                    <tr class="rs-row">
+                        <td class="rs-col rs-col--id">#{{ c.user_id }}</td>
+                        <td class="rs-col rs-col--name">
+                            <div class="rs-card">
+                                <div class="rs-info">
+                                    <div class="rs-title">{{ c.name }}</div>
+                                    <div class="rs-sub">{{ c.role.value }}: {{ c.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="rs-col rs-col--addr">{{ c.address or "—" }}</td>
+                        <td class="rs-col rs-col--status">{{ c.phone or "—" }}</td>
+                        <td class="rs-col">{{ c.created_date.strftime("%d/%m/%Y %H:%M") }}</td>
+                        <td class="rs-col rs-col--action">
+                            <button type="button" class="rs-action rs-action--reject" data-id="{{ c.user_id }}" onclick="event.stopPropagation();"  data-role="{{ c.role.value }}">❌</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Chưa có khách hàng.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="owners">
+            <table class="rs-table table table-hover align-middle">
+                <thead class="rs-thead">
+                    <tr class="rs-row-head">
+                        <th class="rs-col-id">ID</th>
+                        <th class="rs-col-name">Họ và Tên</th>
+                        <th class="rs-col-addr">Địa chỉ</th>
+                        <th class="rs-col-status">SĐT</th>
+                        <th class="rs-col-rating">Ngày tạo</th>
+                        <th class="rs-col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="rs-body">
+                    {% for o in owners%}
+                    <tr class="rs-row">
+                        <td class="rs-col rs-col--id">#{{ o.user_id }}</td>
+                        <td class="rs-col rs-col--name">
+                            <div class="rs-card">
+                                <div class="rs-info">
+                                    <div class="rs-title">{{ o.name }}</div>
+                                    <div class="rs-sub">{{ o.role.value }}: {{ o.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="rs-col rs-col--addr">{{ o.address or "—" }}</td>
+                        <td class="rs-col rs-col--status">{{ o.phone or "—" }}</td>
+                        <td class="rs-col">{{ o.created_date.strftime("%d/%m/%Y %H:%M") }}</td>
+                        <td class="rs-col rs-col--action">
+                            <button type="button" class="rs-action rs-action--reject" data-id="{{ o.user_id }}" onclick="event.stopPropagation();"  data-role="{{ o.role.value }}">❌</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Chưa có restaurant owner.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="toast-stack"></div>
+        {% if noti_assets is defined %}
+          {{ noti_assets() }}
+        {% endif %}
+    </div>
+<script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin/manageUser.js') }}?v=3"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            const targetId = btn.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+
+    const searchInput = document.getElementById("globalSearch");
+
+    searchInput.addEventListener("keyup", () => {
+        const keyword = searchInput.value.toLowerCase().trim();
+
+        // Lấy tab đang active
+        const activeTab = document.querySelector(".tab-content.active");
+        const rows = activeTab.querySelectorAll("tbody tr");
+
+        rows.forEach(row => {
+            // Bỏ qua dòng colspan (nếu có)
+            if (row.querySelector("td[colspan]")) return;
+
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(keyword) ? "" : "none";
+        });
+    });
+</script>
+
+</main>
+
+
