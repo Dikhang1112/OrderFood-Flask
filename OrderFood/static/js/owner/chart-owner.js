@@ -38,8 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
         fetch(`/api/owner/${restaurantId}/stats/revenue`)
             .then(res => res.json())
             .then(data => {
-                document.getElementById("revenue-today").textContent = data.today.toLocaleString() + " VND";
-                document.getElementById("revenue-month").textContent = data.month.toLocaleString() + " VND";
+                document.getElementById("revenue-today").textContent = data.today.toLocaleString() + " đ";
+                document.getElementById("revenue-month").textContent = data.month.toLocaleString() + " đ";
             });
     }
 
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     data: {
                         labels: data.map(d => d.label),
                         datasets: [{
-                            label: "Doanh thu (VND)",
+                            label: "Doanh thu (đ)",
                             data: data.map(d => d.revenue),
                             borderColor: "#36A2EB",
                             fill: false,
@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 beginAtZero: true,
                                 ticks: {
                                     callback: function (value) {
-                                        return value.toLocaleString() + " VND";
+                                        return value.toLocaleString() + " đ";
                                     }
                                 }
                             }
