@@ -42,14 +42,11 @@ def is_restaurant_open(restaurant):
         now = datetime.now().time()
 
         if open_time <= close_time:
-            # Giờ mở và đóng cùng ngày
             return open_time <= now <= close_time
         else:
-            # Giờ đóng thuộc ngày hôm sau (qua nửa đêm)
             return now >= open_time or now <= close_time
 
     except Exception as e:
-        # Trường hợp open_hour/close_hour không hợp lệ
         return False
 
 
@@ -61,13 +58,10 @@ from sqlalchemy import func
 @customer_bp.route("/restaurant/<int:restaurant_id>")
 def restaurant_detail(restaurant_id):
     res = dao_cus.get_restaurant_by_id(restaurant_id)
-    # if not res:
-    #     abort(404)
 
     dishes, categories = dao_cus.get_restaurant_menu_and_categories(restaurant_id)
     stars = dao_cus.get_star_display(res.rating_point or 0)
 
-    # --- NEW: gom món theo category_id ---
     dishes_by_category = {}
     for c in categories:
         cid = getattr(c, "category_id", getattr(c, "id", None))
@@ -84,11 +78,11 @@ def restaurant_detail(restaurant_id):
     return render_template(
         "/customer/restaurant_detail.html",
         res=res,
-        dishes=dishes,  # giữ nguyên để không phá chỗ khác
+        dishes=dishes, 
         stars=stars,
         categories=categories,
         cart_items_count=cart_items_count,
-        dishes_by_category=dishes_by_category,  # --- NEW
+        dishes_by_category=dishes_by_category, 
         is_open=is_open
     )
 
@@ -144,19 +138,15 @@ def delete_cart_item(item_id):
     if not user_id:
         return jsonify({"error": "Bạn chưa đăng nhập"}), 403
 
-    # Lấy item
     item = CartItem.query.get(item_id)
     if not item or not item.cart or not item.cart.customer or item.cart.customer.user_id != user_id:
         return jsonify({"error": "Không tìm thấy sản phẩm"}), 404
 
-    # Lấy restaurant_id trước khi xóa
     restaurant_id = item.cart.restaurant.restaurant_id if item.cart.restaurant else None
 
-    # Xóa item
     db.session.delete(item)
     db.session.commit()
 
-    # Count các CartItem còn lại của user trong restaurant này
     remaining_items = CartItem.query.join(Cart).filter(
         Cart.cus_id == user_id,
         Cart.res_id == restaurant_id,
@@ -393,7 +383,6 @@ def profile_upload_avatar():
         flash("Vui lòng chọn một hình ảnh.", "warning")
         return redirect(url_for("customer.profile_page"))
 
-    # kiểm tra cơ bản
     if not (file.mimetype or "").startswith("image/"):
         flash("Tệp tải lên phải là hình ảnh.", "danger")
         return redirect(url_for("customer.profile_page"))
